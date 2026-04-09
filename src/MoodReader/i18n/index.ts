@@ -3,9 +3,9 @@ type Locale = 'zh' | 'en';
 const strings: Record<string, Record<Locale, string>> = {
   hint: { zh: '倾斜 / 触摸拖动', en: 'Tilt / Touch drag' },
   enable_gyro: { zh: '点击启用陀螺仪', en: 'Tap to enable gyroscope' },
-  start_quiz: { zh: '测测你像谁', en: 'Take the Quiz' },
-  result_you_are: { zh: '你最像', en: 'You are most like' },
-  back: { zh: '再测一次', en: 'Try Again' },
+  chat_with: { zh: '和TA聊聊', en: 'Chat with' },
+  start: { zh: '开始', en: 'Start' },
+  back_home: { zh: '返回', en: 'Back' },
 };
 
 function detectLocale(): Locale {

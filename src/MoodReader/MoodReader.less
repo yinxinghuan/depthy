@@ -186,6 +186,40 @@
   margin: 4px 0 12px;
 }
 
+/* ── Speech bubble ── */
+.mr__bubble {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(8px);
+  color: @text;
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 16px;
+  white-space: nowrap;
+  animation: mr-bubble-in 0.3s ease-out;
+  pointer-events: none;
+  z-index: 5;
+}
+
+@keyframes mr-bubble-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(8px) scale(0.9); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* ── Dialog (intro/outro) ── */
+.mr__dialog {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 16px; padding: 8px 24px;
+  animation: mr-fade-up 0.4s ease-out;
+}
+.mr__dialog-text {
+  font-size: 16px; color: @text; text-align: center; line-height: 1.6;
+  font-style: italic;
+}
+
 @keyframes mr-fade-up {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }

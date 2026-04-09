@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import LayeredCharacter from './components/LayeredCharacter';
 import { useTilt } from './hooks/useTilt';
 import { CHARACTERS, loadCharacter } from './data/characters';
-import { QUIZ, RESULTS, CHARACTER_ORDER } from './data/quiz';
+import { CHARACTER_QUIZZES } from './data/quiz';
 import type { ExpressionType } from './data/expressions';
 import { t } from './i18n';
 import type { CharacterData } from './types';
 import './MoodReader.less';
 
-type Phase = 'gallery' | 'quiz' | 'result';
+type Phase = 'home' | 'intro' | 'quiz' | 'outro';
 
 function preloadImages(char: CharacterData): Promise<void> {
   const srcs = char.layers.map(l => l[0]);
@@ -24,27 +24,30 @@ function preloadImages(char: CharacterData): Promise<void> {
   ]);
 }
 
+const locale = navigator.language.startsWith('zh') ? 'zh' : 'en';
+
 export default function MoodReader() {
-  const [phase, setPhase] = useState<Phase>('gallery');
-  const [charIndex, setCharIndex] = useState(0);
+  const [phase, setPhase] = useState<Phase>('home');
+  const [homeIndex, setHomeIndex] = useState(0);
+  const [activeChar, setActiveChar] = useState<string>('isaya');
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
   const { tilt, showPermissionButton, requestGyroPermission } = useTilt();
 
   // Quiz state
   const [qIndex, setQIndex] = useState(0);
-  const [scores, setScores] = useState([0, 0, 0, 0]);
-  const [answered, setAnswered] = useState(false);
-  const [resultChar, setResultChar] = useState('isaya');
-
-  const charData = phase === 'result'
-    ? loadCharacter(resultChar)
-    : CHARACTERS[charIndex];
-
-  // Expression for current state
   const [expression, setExpression] = useState<ExpressionType>('neutral');
+  const [reactionText, setReactionText] = useState('');
+  const [answered, setAnswered] = useState(false);
 
-  // Preload images
+  const charData = phase === 'home'
+    ? CHARACTERS[homeIndex]
+    : loadCharacter(activeChar);
+
+  const quiz = CHARACTER_QUIZZES[activeChar];
+  const currentQ = quiz?.questions[qIndex];
+
+  // Preload
   useEffect(() => {
     let cancelled = false;
     setVisible(false);
@@ -57,80 +60,62 @@ export default function MoodReader() {
     return () => { cancelled = true; };
   }, [charData]);
 
-  // Quiz expression changes
-  useEffect(() => {
-    if (phase === 'quiz') {
-      const q = QUIZ[qIndex];
-      if (q) {
-        // Show the reactor character
-        const reactorIdx = CHARACTERS.findIndex(c => c.name === q.reactor);
-        if (reactorIdx >= 0) setCharIndex(reactorIdx);
-        setExpression(q.reactExpr);
-      }
-    } else if (phase === 'result') {
-      const r = RESULTS[resultChar];
-      setExpression(r?.expr ?? 'happy');
-    } else {
-      setExpression('neutral');
-    }
-  }, [phase, qIndex, resultChar]);
-
-  // Gallery navigation
-  const switchChar = useCallback((i: number) => {
+  // ── Home: character select carousel ──
+  const switchHome = useCallback((i: number) => {
     setReady(false);
     setVisible(false);
-    setCharIndex(i);
-    setExpression('neutral');
+    setHomeIndex(i);
   }, []);
 
-  const prev = useCallback(() => switchChar((charIndex - 1 + CHARACTERS.length) % CHARACTERS.length), [charIndex, switchChar]);
-  const next = useCallback(() => switchChar((charIndex + 1) % CHARACTERS.length), [charIndex, switchChar]);
+  const enterCharacter = useCallback(() => {
+    const char = CHARACTERS[homeIndex];
+    setActiveChar(char.name);
+    setPhase('intro');
+    setExpression('neutral');
+    setQIndex(0);
+    setReactionText('');
+    setAnswered(false);
+  }, [homeIndex]);
 
-  // Start quiz
+  // ── Quiz interactions ──
   const startQuiz = useCallback(() => {
     setPhase('quiz');
-    setQIndex(0);
-    setScores([0, 0, 0, 0]);
+    if (currentQ) setExpression(currentQ.askExpr);
+    setReactionText('');
     setAnswered(false);
-  }, []);
+  }, [currentQ]);
 
-  // Answer question
-  const answer = useCallback((optScores: [number, number, number, number]) => {
-    if (answered) return;
+  const answer = useCallback((optIdx: number) => {
+    if (answered || !currentQ) return;
     setAnswered(true);
-    const newScores = scores.map((s, i) => s + optScores[i]);
-    setScores(newScores);
-
-    // Show happy reaction briefly
-    setExpression('happy');
+    const opt = currentQ.options[optIdx];
+    setExpression(opt.reaction);
+    setReactionText(opt.reactionText?.[locale] ?? '');
 
     setTimeout(() => {
-      if (qIndex < QUIZ.length - 1) {
+      if (qIndex < quiz.questions.length - 1) {
+        const nextQ = quiz.questions[qIndex + 1];
         setQIndex(qIndex + 1);
+        setExpression(nextQ.askExpr);
+        setReactionText('');
         setAnswered(false);
       } else {
-        // Calculate result
-        const maxScore = Math.max(...newScores);
-        const winnerIdx = newScores.indexOf(maxScore);
-        const winner = CHARACTER_ORDER[winnerIdx];
-        setResultChar(winner);
-        setPhase('result');
+        setPhase('outro');
+        setExpression(quiz.outroExpr);
+        setReactionText('');
       }
-    }, 600);
-  }, [answered, scores, qIndex]);
+    }, 1800);
+  }, [answered, currentQ, qIndex, quiz]);
 
-  const backToGallery = useCallback(() => {
-    setPhase('gallery');
-    setCharIndex(0);
+  const backHome = useCallback(() => {
+    setPhase('home');
     setExpression('neutral');
+    setReactionText('');
   }, []);
-
-  const currentQuestion = QUIZ[qIndex];
-  const locale = navigator.language.startsWith('zh') ? 'zh' : 'en';
 
   return (
     <div className="mr">
-      {/* Character portrait */}
+      {/* Character portrait — always visible */}
       <div className="mr__stage">
         {!ready && <div className="mr__shimmer" style={{ width: 380, height: 380, borderRadius: 28 }} />}
         <div className={`mr__portrait ${visible ? 'mr__portrait--visible' : ''}`}>
@@ -147,54 +132,66 @@ export default function MoodReader() {
             />
           )}
         </div>
+        {/* Reaction bubble */}
+        {reactionText && (
+          <div className="mr__bubble" key={reactionText}>
+            {reactionText}
+          </div>
+        )}
       </div>
 
       {showPermissionButton && (
         <button className="mr__gyro-btn" onClick={requestGyroPermission}>{t('enable_gyro')}</button>
       )}
 
-      {/* ── Gallery mode ── */}
-      {phase === 'gallery' && (
+      {/* ── Home: character select ── */}
+      {phase === 'home' && (
         <>
           <div className="mr__controls">
-            <button className="mr__nav" onPointerDown={prev}>
+            <button className="mr__nav" onPointerDown={() => switchHome((homeIndex - 1 + CHARACTERS.length) % CHARACTERS.length)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>
             </button>
             <div className="mr__info">
               <span className="mr__name">{charData.displayName}</span>
               <span className="mr__hint">{t('hint')}</span>
             </div>
-            <button className="mr__nav" onPointerDown={next}>
+            <button className="mr__nav" onPointerDown={() => switchHome((homeIndex + 1) % CHARACTERS.length)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 6 15 12 9 18" /></svg>
             </button>
           </div>
-
           <div className="mr__dots">
             {CHARACTERS.map((c, i) => (
-              <span key={c.name} className={`mr__dot ${i === charIndex ? 'mr__dot--active' : ''}`} onPointerDown={() => switchChar(i)} />
+              <span key={c.name} className={`mr__dot ${i === homeIndex ? 'mr__dot--active' : ''}`} onPointerDown={() => switchHome(i)} />
             ))}
           </div>
-
-          <button className="mr__start-btn" onPointerDown={startQuiz}>{t('start_quiz')}</button>
+          <button className="mr__start-btn" onPointerDown={enterCharacter}>{t('chat_with')} {charData.displayName}</button>
         </>
       )}
 
-      {/* ── Quiz mode ── */}
-      {phase === 'quiz' && currentQuestion && (
-        <div className="mr__quiz">
+      {/* ── Intro ── */}
+      {phase === 'intro' && quiz && (
+        <div className="mr__dialog">
+          <p className="mr__dialog-text">{quiz.intro[locale]}</p>
+          <button className="mr__start-btn" onPointerDown={startQuiz}>{t('start')}</button>
+        </div>
+      )}
+
+      {/* ── Quiz ── */}
+      {phase === 'quiz' && currentQ && (
+        <div className="mr__quiz" key={qIndex}>
           <div className="mr__quiz-progress">
-            <span>{qIndex + 1} / {QUIZ.length}</span>
+            <span>{qIndex + 1} / {quiz.questions.length}</span>
             <div className="mr__quiz-bar">
-              <div className="mr__quiz-fill" style={{ width: `${((qIndex + 1) / QUIZ.length) * 100}%` }} />
+              <div className="mr__quiz-fill" style={{ width: `${((qIndex + 1) / quiz.questions.length) * 100}%` }} />
             </div>
           </div>
-          <p className="mr__quiz-q">{currentQuestion.text[locale]}</p>
+          <p className="mr__quiz-q">{currentQ.text[locale]}</p>
           <div className="mr__quiz-options">
-            {currentQuestion.options.map((opt, i) => (
+            {currentQ.options.map((opt, i) => (
               <button
                 key={i}
                 className={`mr__quiz-opt ${answered ? 'mr__quiz-opt--disabled' : ''}`}
-                onPointerDown={() => answer(opt.scores)}
+                onPointerDown={() => answer(i)}
               >
                 {opt.text[locale]}
               </button>
@@ -203,14 +200,11 @@ export default function MoodReader() {
         </div>
       )}
 
-      {/* ── Result mode ── */}
-      {phase === 'result' && (
-        <div className="mr__result">
-          <h2 className="mr__result-title">{t('result_you_are')}</h2>
-          <span className="mr__result-name">{loadCharacter(resultChar).displayName}</span>
-          <p className="mr__result-subtitle">{RESULTS[resultChar].title[locale]}</p>
-          <p className="mr__result-desc">{RESULTS[resultChar].desc[locale]}</p>
-          <button className="mr__start-btn" onPointerDown={backToGallery}>{t('back')}</button>
+      {/* ── Outro ── */}
+      {phase === 'outro' && quiz && (
+        <div className="mr__dialog">
+          <p className="mr__dialog-text">{quiz.outro[locale]}</p>
+          <button className="mr__start-btn" onPointerDown={backHome}>{t('back_home')}</button>
         </div>
       )}
     </div>
