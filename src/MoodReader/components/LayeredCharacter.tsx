@@ -1,130 +1,152 @@
-import { useEffect, useRef, useCallback, useMemo } from 'react';
-import type { LayerDef, TiltState } from '../types';
-import type { ExpressionType } from '../data/expressions';
-import { EXPRESSIONS, MOUTH_CENTERS } from '../data/expressions';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import type { LayerDef, ExpressionName } from '../types';
 import './LayeredCharacter.less';
 
 interface Props {
   charName: string;
-  layers: LayerDef[];
+  bgSrc: string;
+  /** All expression layer sets */
+  expressions: Record<ExpressionName, LayerDef[]>;
+  /** Current expression to display */
+  expression?: ExpressionName;
   canvasSize: number;
-  tilt: TiltState;
-  expression?: ExpressionType;
   width?: number;
   maxShift?: number;
 }
 
 const DEPTH_MAP: Record<string, number> = {
   'mr-bg': 0.0,
-  'mr-back-hair': 0.2,
-  'mr-headwear': 0.4,
-  'mr-handwear': 0.35,
-  'mr-front-hair': 0.9,
-  'mr-eyewear': 0.65,
+  'mr-back-hair': 0.15,
+  'mr-headwear': 0.35,
+  'mr-handwear': 0.3,
+  'mr-front-hair': 0.85,
+  'mr-eyewear': 0.6,
 };
 
 function getDepthMult(cls: string, id: string): number {
   for (const [key, mult] of Object.entries(DEPTH_MAP)) {
     if (cls.includes(key)) return mult;
   }
-  if (id.startsWith('irides') || id.startsWith('eyewhite') || id.startsWith('eyelash') || id.startsWith('eyebrow')) return 0.95;
-  if (id === 'nose' || id === 'mouth') return 0.7;
-  return 0.45;
+  if (id.startsWith('irides') || id.startsWith('eyewhite') || id.startsWith('eyelash') || id.startsWith('eyebrow')) return 0.9;
+  if (id === 'nose' || id === 'mouth') return 0.65;
+  return 0.4;
+}
+
+/** Slow organic auto-sway for parallax */
+function useAutoSway() {
+  const [sway, setSway] = useState({ x: 0, y: 0 });
+  const rafRef = useRef<number>();
+  const startRef = useRef(Date.now());
+
+  useEffect(() => {
+    const animate = () => {
+      const t = (Date.now() - startRef.current) / 1000;
+      setSway({
+        x: Math.sin(t * 0.4) * 0.35 + Math.sin(t * 0.7) * 0.15,
+        y: Math.cos(t * 0.3) * 0.2 + Math.sin(t * 0.5 + 1) * 0.1,
+      });
+      rafRef.current = requestAnimationFrame(animate);
+    };
+    rafRef.current = requestAnimationFrame(animate);
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
+  }, []);
+
+  return sway;
 }
 
 export default function LayeredCharacter({
   charName,
-  layers,
-  canvasSize,
-  tilt,
+  bgSrc,
+  expressions,
   expression = 'neutral',
+  canvasSize,
   width = 380,
-  maxShift = 30,
+  maxShift = 25,
 }: Props) {
   const scale = width / canvasSize;
+  const sway = useAutoSway();
   const blinkTimerRef = useRef<ReturnType<typeof setTimeout>>();
-  const isBlinkingRef = useRef(false);
-  const expr = EXPRESSIONS[expression];
-  const mouthCenter = MOUTH_CENTERS[charName] ?? { x: 640, y: 700 };
 
-  // ── Blink (only when not in forced expression that changes eyelash) ──
+  const currentLayers = expressions[expression] ?? expressions.neutral;
+  const [prevExpr, setPrevExpr] = useState(expression);
+  const [transitioning, setTransitioning] = useState(false);
+
+  // Crossfade on expression change
+  useEffect(() => {
+    if (expression !== prevExpr) {
+      setTransitioning(true);
+      const timer = setTimeout(() => {
+        setPrevExpr(expression);
+        setTransitioning(false);
+      }, 400); // match CSS transition duration
+      return () => clearTimeout(timer);
+    }
+  }, [expression, prevExpr]);
+
+  const prevLayers = expressions[prevExpr] ?? expressions.neutral;
+
+  // Blink (only for neutral/happy)
   const shouldBlink = expression === 'neutral' || expression === 'happy';
 
   const blink = useCallback(() => {
     if (!shouldBlink) return;
-    isBlinkingRef.current = true;
+    const container = document.querySelector(`.mr-char-${charName}`);
+    if (!container) return;
 
-    document.querySelectorAll(`.mr-char-${charName} .mr-eyelash-layer`).forEach(el => {
-      const e = el as HTMLElement;
-      e.style.transition = 'transform 70ms ease-in';
-      e.style.transform = e.dataset.baseTransform + ' scaleY(0.05)';
+    // Close eyelashes
+    container.querySelectorAll<HTMLElement>('.mr-expr-current .mr-eyelash-layer').forEach(el => {
+      el.style.transition = 'transform 70ms ease-in';
+      el.style.transform = 'scaleY(0.05)';
     });
-    document.querySelectorAll(`.mr-char-${charName} .mr-eye-layer`).forEach(el => {
-      const e = el as HTMLElement;
-      e.style.transition = 'opacity 50ms';
-      e.style.opacity = '0';
+    container.querySelectorAll<HTMLElement>('.mr-expr-current .mr-eye-layer').forEach(el => {
+      el.style.transition = 'opacity 50ms';
+      el.style.opacity = '0';
     });
 
     blinkTimerRef.current = setTimeout(() => {
-      isBlinkingRef.current = false;
-      document.querySelectorAll(`.mr-char-${charName} .mr-eyelash-layer`).forEach(el => {
-        const e = el as HTMLElement;
-        e.style.transition = 'transform 120ms ease-out';
-        e.style.transform = e.dataset.baseTransform ?? '';
+      container.querySelectorAll<HTMLElement>('.mr-expr-current .mr-eyelash-layer').forEach(el => {
+        el.style.transition = 'transform 120ms ease-out';
+        el.style.transform = '';
       });
-      document.querySelectorAll(`.mr-char-${charName} .mr-eye-layer`).forEach(el => {
-        const e = el as HTMLElement;
-        e.style.transition = 'opacity 80ms 30ms';
-        e.style.opacity = e.dataset.baseOpacity ?? '1';
+      container.querySelectorAll<HTMLElement>('.mr-expr-current .mr-eye-layer').forEach(el => {
+        el.style.transition = 'opacity 80ms 30ms';
+        el.style.opacity = '';
       });
-
       blinkTimerRef.current = setTimeout(blink, 2500 + Math.random() * 3500);
     }, 150);
   }, [shouldBlink, charName]);
 
   useEffect(() => {
-    if (shouldBlink) {
-      blinkTimerRef.current = setTimeout(blink, 1500);
-    }
+    if (shouldBlink) blinkTimerRef.current = setTimeout(blink, 1500);
     return () => { if (blinkTimerRef.current) clearTimeout(blinkTimerRef.current); };
   }, [blink, shouldBlink]);
 
-  // ── Parallax offsets ──
-  const layerStyles = useMemo(() => {
-    return layers.map(([, left, top, w, h, cls, id]) => {
+  // Render a layer set
+  const renderLayers = (layers: LayerDef[]) => (
+    layers.map(([src, left, top, w, h, cls, id], i) => {
       const mult = getDepthMult(cls, id);
-      return {
-        left: left + tilt.x * maxShift * mult,
-        top: top + tilt.y * maxShift * mult * 0.6,
-        width: w,
-        height: h,
-      };
-    });
-  }, [layers, tilt.x, tilt.y, maxShift]);
+      const ox = sway.x * maxShift * mult;
+      const oy = sway.y * maxShift * mult * 0.6;
+      const isEyelash = id.startsWith('eyelash');
+      const isEye = id.startsWith('eyewhite') || id.startsWith('irides');
 
-  // ── Expression transforms per layer id ──
-  const getExprTransform = (id: string): string => {
-    switch (id) {
-      case 'eyebrow-r': return `rotate(${expr.eyebrowR.rotate ?? 0}deg) translateY(${expr.eyebrowR.translateY ?? 0}px)`;
-      case 'eyebrow-l': return `rotate(${expr.eyebrowL.rotate ?? 0}deg) translateY(${expr.eyebrowL.translateY ?? 0}px)`;
-      case 'eyelash-r': return `scaleY(${expr.eyelashR.scaleY ?? 1})`;
-      case 'eyelash-l': return `scaleY(${expr.eyelashL.scaleY ?? 1})`;
-      case 'irides-r': return `translateX(${expr.iridesR.translateX ?? 0}px) translateY(${expr.iridesR.translateY ?? 0}px) scale(${expr.iridesR.scale ?? 1})`;
-      case 'irides-l': return `translateX(${expr.iridesL.translateX ?? 0}px) translateY(${expr.iridesL.translateY ?? 0}px) scale(${expr.iridesL.scale ?? 1})`;
-      default: return '';
-    }
-  };
-
-  const getExprOpacity = (id: string): number | undefined => {
-    if (id === 'irides-r') return expr.iridesR.opacity;
-    if (id === 'irides-l') return expr.iridesL.opacity;
-    if (id === 'eyewhite-r') return expr.iridesR.opacity; // fade with irides
-    if (id === 'eyewhite-l') return expr.iridesL.opacity;
-    return undefined;
-  };
-
-  const isExprLayer = (id: string) =>
-    id.startsWith('eyebrow') || id.startsWith('eyelash') || id.startsWith('irides') || id.startsWith('eyewhite');
+      return (
+        <img
+          key={`${id || cls || i}-${i}`}
+          src={src}
+          className={`mr-layer ${cls} ${isEyelash ? 'mr-eyelash-layer' : ''} ${isEye ? 'mr-eye-layer' : ''}`}
+          draggable={false}
+          style={{
+            left: left + ox,
+            top: top + oy,
+            width: w,
+            height: h,
+            pointerEvents: 'none',
+          }}
+        />
+      );
+    })
+  );
 
   return (
     <div
@@ -140,59 +162,34 @@ export default function LayeredCharacter({
           transformOrigin: 'top left',
         }}
       >
-        {layers.map(([filename, , , , , cls, id], i) => {
-          const style = layerStyles[i];
-          const isEyelash = id.startsWith('eyelash');
-          const isEye = id.startsWith('eyewhite') || id.startsWith('irides');
-          const exprTransform = getExprTransform(id);
-          const exprOpacity = getExprOpacity(id);
-
-          return (
-            <img
-              key={`${filename}-${i}`}
-              src={filename}
-              className={`mr-layer ${cls} ${isEyelash ? 'mr-eyelash-layer' : ''} ${isEye ? 'mr-eye-layer' : ''}`}
-              data-base-transform={exprTransform}
-              data-base-opacity={String(exprOpacity ?? 1)}
-              draggable={false}
-              style={{
-                left: style.left,
-                top: style.top,
-                width: style.width,
-                height: style.height,
-                pointerEvents: 'none',
-                transition: isExprLayer(id)
-                  ? 'left 0.15s ease-out, top 0.15s ease-out, transform 400ms ease-out, opacity 400ms ease-out'
-                  : 'left 0.15s ease-out, top 0.15s ease-out',
-                ...(exprTransform ? { transform: exprTransform } : {}),
-                ...(exprOpacity !== undefined ? { opacity: exprOpacity } : {}),
-              }}
-            />
-          );
-        })}
-
-        {/* SVG mouth overlay */}
-        <svg
-          className="mr-layer mr-mouth-overlay"
+        {/* Background */}
+        <img
+          src={bgSrc}
+          className="mr-layer mr-bg"
+          draggable={false}
           style={{
-            left: mouthCenter.x - 25,
-            top: mouthCenter.y - 15,
-            width: 50,
-            height: 30,
-            transition: 'left 0.15s ease-out, top 0.15s ease-out',
+            left: sway.x * maxShift * 0.0,
+            top: sway.y * maxShift * 0.0,
+            width: canvasSize,
+            height: canvasSize,
+            pointerEvents: 'none',
           }}
-          viewBox="-25 -15 50 30"
+        />
+
+        {/* Previous expression (fading out during transition) */}
+        {transitioning && prevExpr !== expression && (
+          <div className="mr-expr-layer mr-expr-prev" style={{ opacity: 0 }}>
+            {renderLayers(prevLayers)}
+          </div>
+        )}
+
+        {/* Current expression (fading in) */}
+        <div
+          className={`mr-expr-layer mr-expr-current ${transitioning ? 'mr-expr-entering' : ''}`}
+          style={{ opacity: transitioning ? 0 : 1 }}
         >
-          <path
-            d={expr.mouth}
-            fill="none"
-            stroke="#c4626a"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{ transition: 'd 400ms ease-out' }}
-          />
-        </svg>
+          {renderLayers(currentLayers)}
+        </div>
       </div>
     </div>
   );

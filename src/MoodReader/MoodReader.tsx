@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback } from 'react';
 import LayeredCharacter from './components/LayeredCharacter';
-import { useTilt } from './hooks/useTilt';
 import { CHARACTERS, loadCharacter } from './data/characters';
 import { CHARACTER_QUIZZES } from './data/quiz';
-import type { ExpressionType } from './data/expressions';
+import type { ExpressionName, CharacterData } from './types';
 import { t } from './i18n';
-import type { CharacterData } from './types';
 import './MoodReader.less';
 
 type Phase = 'home' | 'intro' | 'quiz' | 'outro';
 
 function preloadImages(char: CharacterData): Promise<void> {
-  const srcs = char.layers.map(l => l[0]);
+  // Preload all expression layers + background
+  const allSrcs = new Set<string>();
+  allSrcs.add(char.bgSrc);
+  for (const layers of Object.values(char.expressions)) {
+    for (const l of layers) allSrcs.add(l[0]);
+  }
   const loadOne = (src: string) => new Promise<void>((resolve) => {
     const img = new Image();
     img.onload = () => resolve();
@@ -19,8 +22,8 @@ function preloadImages(char: CharacterData): Promise<void> {
     img.src = src;
   });
   return Promise.race([
-    Promise.all(srcs.map(loadOne)).then(() => {}),
-    new Promise<void>(resolve => setTimeout(resolve, 5000)),
+    Promise.all([...allSrcs].map(loadOne)).then(() => {}),
+    new Promise<void>(resolve => setTimeout(resolve, 8000)),
   ]);
 }
 
@@ -29,21 +32,17 @@ const locale = navigator.language.startsWith('zh') ? 'zh' : 'en';
 export default function MoodReader() {
   const [phase, setPhase] = useState<Phase>('home');
   const [homeIndex, setHomeIndex] = useState(0);
-  const [activeChar, setActiveChar] = useState<string>('isaya');
+  const [activeChar, setActiveChar] = useState('isaya');
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
-  const { tilt, showPermissionButton, requestGyroPermission } = useTilt();
 
-  // Quiz state
+  // Quiz
   const [qIndex, setQIndex] = useState(0);
-  const [expression, setExpression] = useState<ExpressionType>('neutral');
+  const [expression, setExpression] = useState<ExpressionName>('neutral');
   const [reactionText, setReactionText] = useState('');
   const [answered, setAnswered] = useState(false);
 
-  const charData = phase === 'home'
-    ? CHARACTERS[homeIndex]
-    : loadCharacter(activeChar);
-
+  const charData = phase === 'home' ? CHARACTERS[homeIndex] : loadCharacter(activeChar);
   const quiz = CHARACTER_QUIZZES[activeChar];
   const currentQ = quiz?.questions[qIndex];
 
@@ -60,16 +59,14 @@ export default function MoodReader() {
     return () => { cancelled = true; };
   }, [charData]);
 
-  // ── Home: character select carousel ──
+  // Home nav
   const switchHome = useCallback((i: number) => {
-    setReady(false);
-    setVisible(false);
-    setHomeIndex(i);
+    setReady(false); setVisible(false); setHomeIndex(i);
+    setExpression('neutral');
   }, []);
 
   const enterCharacter = useCallback(() => {
-    const char = CHARACTERS[homeIndex];
-    setActiveChar(char.name);
+    setActiveChar(CHARACTERS[homeIndex].name);
     setPhase('intro');
     setExpression('neutral');
     setQIndex(0);
@@ -77,45 +74,39 @@ export default function MoodReader() {
     setAnswered(false);
   }, [homeIndex]);
 
-  // ── Quiz interactions ──
   const startQuiz = useCallback(() => {
     setPhase('quiz');
-    if (currentQ) setExpression(currentQ.askExpr);
-    setReactionText('');
-    setAnswered(false);
+    if (currentQ) setExpression(currentQ.askExpr as ExpressionName);
+    setReactionText(''); setAnswered(false);
   }, [currentQ]);
 
   const answer = useCallback((optIdx: number) => {
     if (answered || !currentQ) return;
     setAnswered(true);
     const opt = currentQ.options[optIdx];
-    setExpression(opt.reaction);
+    setExpression(opt.reaction as ExpressionName);
     setReactionText(opt.reactionText?.[locale] ?? '');
 
     setTimeout(() => {
       if (qIndex < quiz.questions.length - 1) {
         const nextQ = quiz.questions[qIndex + 1];
         setQIndex(qIndex + 1);
-        setExpression(nextQ.askExpr);
-        setReactionText('');
-        setAnswered(false);
+        setExpression(nextQ.askExpr as ExpressionName);
+        setReactionText(''); setAnswered(false);
       } else {
         setPhase('outro');
-        setExpression(quiz.outroExpr);
+        setExpression(quiz.outroExpr as ExpressionName);
         setReactionText('');
       }
     }, 1800);
   }, [answered, currentQ, qIndex, quiz]);
 
   const backHome = useCallback(() => {
-    setPhase('home');
-    setExpression('neutral');
-    setReactionText('');
+    setPhase('home'); setExpression('neutral'); setReactionText('');
   }, []);
 
   return (
     <div className="mr">
-      {/* Character portrait — always visible */}
       <div className="mr__stage">
         {!ready && <div className="mr__shimmer" style={{ width: 380, height: 380, borderRadius: 28 }} />}
         <div className={`mr__portrait ${visible ? 'mr__portrait--visible' : ''}`}>
@@ -123,28 +114,18 @@ export default function MoodReader() {
             <LayeredCharacter
               key={charData.name}
               charName={charData.name}
-              layers={charData.layers}
-              canvasSize={charData.canvasSize}
-              tilt={tilt}
+              bgSrc={charData.bgSrc}
+              expressions={charData.expressions}
               expression={expression}
+              canvasSize={charData.canvasSize}
               width={380}
-              maxShift={35}
+              maxShift={25}
             />
           )}
         </div>
-        {/* Reaction bubble */}
-        {reactionText && (
-          <div className="mr__bubble" key={reactionText}>
-            {reactionText}
-          </div>
-        )}
+        {reactionText && <div className="mr__bubble" key={reactionText}>{reactionText}</div>}
       </div>
 
-      {showPermissionButton && (
-        <button className="mr__gyro-btn" onClick={requestGyroPermission}>{t('enable_gyro')}</button>
-      )}
-
-      {/* ── Home: character select ── */}
       {phase === 'home' && (
         <>
           <div className="mr__controls">
@@ -153,7 +134,6 @@ export default function MoodReader() {
             </button>
             <div className="mr__info">
               <span className="mr__name">{charData.displayName}</span>
-              <span className="mr__hint">{t('hint')}</span>
             </div>
             <button className="mr__nav" onPointerDown={() => switchHome((homeIndex + 1) % CHARACTERS.length)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 6 15 12 9 18" /></svg>
@@ -168,7 +148,6 @@ export default function MoodReader() {
         </>
       )}
 
-      {/* ── Intro ── */}
       {phase === 'intro' && quiz && (
         <div className="mr__dialog">
           <p className="mr__dialog-text">{quiz.intro[locale]}</p>
@@ -176,7 +155,6 @@ export default function MoodReader() {
         </div>
       )}
 
-      {/* ── Quiz ── */}
       {phase === 'quiz' && currentQ && (
         <div className="mr__quiz" key={qIndex}>
           <div className="mr__quiz-progress">
@@ -188,19 +166,13 @@ export default function MoodReader() {
           <p className="mr__quiz-q">{currentQ.text[locale]}</p>
           <div className="mr__quiz-options">
             {currentQ.options.map((opt, i) => (
-              <button
-                key={i}
-                className={`mr__quiz-opt ${answered ? 'mr__quiz-opt--disabled' : ''}`}
-                onPointerDown={() => answer(i)}
-              >
-                {opt.text[locale]}
-              </button>
+              <button key={i} className={`mr__quiz-opt ${answered ? 'mr__quiz-opt--disabled' : ''}`}
+                onPointerDown={() => answer(i)}>{opt.text[locale]}</button>
             ))}
           </div>
         </div>
       )}
 
-      {/* ── Outro ── */}
       {phase === 'outro' && quiz && (
         <div className="mr__dialog">
           <p className="mr__dialog-text">{quiz.outro[locale]}</p>
