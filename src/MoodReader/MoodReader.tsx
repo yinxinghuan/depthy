@@ -2,13 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import LayeredCharacter from './components/LayeredCharacter';
 import { CHARACTERS, loadCharacter } from './data/characters';
 import { CHARACTER_QUIZZES, STORY_INTRO } from './data/quiz';
+import { ENDINGS } from './data/endings';
 import type { ExpressionName, CharacterData } from './types';
 import { t } from './i18n';
 import './MoodReader.less';
 
-type Phase = 'home' | 'intro' | 'quiz' | 'outro';
+type Phase = 'home' | 'intro' | 'quiz' | 'outro' | 'verdict' | 'ending';
 
-/** Preload ALL expression images upfront to prevent flash on switch. */
 function preloadImages(char: CharacterData): Promise<void> {
   const allSrcs = new Set<string>();
   allSrcs.add(char.bgSrc);
@@ -21,7 +21,6 @@ function preloadImages(char: CharacterData): Promise<void> {
     img.onerror = () => resolve();
     img.src = src;
   });
-  // Load all expressions upfront, 12s timeout for all ~90 images
   return Promise.race([
     Promise.all([...allSrcs].map(loadOne)).then(() => {}),
     new Promise<void>(resolve => setTimeout(resolve, 12000)),
@@ -37,15 +36,24 @@ export default function MoodReader() {
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
 
-  // Quiz
   const [qIndex, setQIndex] = useState(0);
   const [expression, setExpression] = useState<ExpressionName>('neutral');
   const [reactionText, setReactionText] = useState('');
   const [answered, setAnswered] = useState(false);
 
-  const charData = phase === 'home' ? CHARACTERS[homeIndex] : loadCharacter(activeChar);
+  // Track which characters have been interrogated
+  const [interrogated, setInterrogated] = useState<Set<string>>(new Set());
+  const [endingIndex, setEndingIndex] = useState(-1);
+
+  const charData = (phase === 'ending' && endingIndex >= 0)
+    ? loadCharacter(ENDINGS[endingIndex].reactor)
+    : phase === 'home' || phase === 'verdict'
+      ? CHARACTERS[homeIndex]
+      : loadCharacter(activeChar);
+
   const quiz = CHARACTER_QUIZZES[activeChar];
   const currentQ = quiz?.questions[qIndex];
+  const allDone = interrogated.size >= 4;
 
   // Preload
   useEffect(() => {
@@ -60,7 +68,6 @@ export default function MoodReader() {
     return () => { cancelled = true; };
   }, [charData]);
 
-  // Home nav
   const switchHome = useCallback((i: number) => {
     setReady(false); setVisible(false); setHomeIndex(i);
     setExpression('neutral');
@@ -71,8 +78,7 @@ export default function MoodReader() {
     setPhase('intro');
     setExpression('neutral');
     setQIndex(0);
-    setReactionText('');
-    setAnswered(false);
+    setReactionText(''); setAnswered(false);
   }, [homeIndex]);
 
   const startQuiz = useCallback(() => {
@@ -85,12 +91,10 @@ export default function MoodReader() {
     if (answered || !currentQ) return;
     setAnswered(true);
     const opt = currentQ.options[optIdx];
-    // Switch expression — stays until next answer
     setExpression(opt.reaction as ExpressionName);
     setReactionText(opt.reactionText?.[locale] ?? '');
 
     setTimeout(() => {
-      // Clear bubble, advance question, but KEEP current expression
       setReactionText('');
       if (qIndex < quiz.questions.length - 1) {
         setQIndex(qIndex + 1);
@@ -98,12 +102,35 @@ export default function MoodReader() {
       } else {
         setPhase('outro');
         setExpression(quiz.outroExpr as ExpressionName);
+        setInterrogated(prev => new Set([...prev, activeChar]));
       }
-    }, 1800);
-  }, [answered, currentQ, qIndex, quiz]);
+    }, 2200);
+  }, [answered, currentQ, qIndex, quiz, activeChar]);
 
   const backHome = useCallback(() => {
-    setPhase('home'); setExpression('neutral'); setReactionText('');
+    if (allDone) {
+      setPhase('verdict');
+    } else {
+      setPhase('home');
+    }
+    setExpression('neutral');
+    setReactionText('');
+  }, [allDone]);
+
+  const chooseEnding = useCallback((idx: number) => {
+    setEndingIndex(idx);
+    const ending = ENDINGS[idx];
+    setExpression(ending.reactExpr);
+    setPhase('ending');
+  }, []);
+
+  const restart = useCallback(() => {
+    setPhase('home');
+    setHomeIndex(0);
+    setInterrogated(new Set());
+    setEndingIndex(-1);
+    setExpression('neutral');
+    setReactionText('');
   }, []);
 
   return (
@@ -127,6 +154,7 @@ export default function MoodReader() {
         {reactionText && <div className="mr__bubble" key={reactionText}>{reactionText}</div>}
       </div>
 
+      {/* ── Home ── */}
       {phase === 'home' && (
         <>
           <div className="mr__controls">
@@ -136,6 +164,7 @@ export default function MoodReader() {
             <div className="mr__info">
               <span className="mr__name">{charData.displayName}</span>
               {quiz && <span className="mr__role">{quiz.role[locale]}</span>}
+              {interrogated.has(charData.name) && <span className="mr__done-tag">✓ {locale === 'zh' ? '已问话' : 'Done'}</span>}
             </div>
             <button className="mr__nav" onPointerDown={() => switchHome((homeIndex + 1) % CHARACTERS.length)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 6 15 12 9 18" /></svg>
@@ -143,14 +172,22 @@ export default function MoodReader() {
           </div>
           <div className="mr__dots">
             {CHARACTERS.map((c, i) => (
-              <span key={c.name} className={`mr__dot ${i === homeIndex ? 'mr__dot--active' : ''}`} onPointerDown={() => switchHome(i)} />
+              <span key={c.name} className={`mr__dot ${i === homeIndex ? 'mr__dot--active' : ''} ${interrogated.has(c.name) ? 'mr__dot--done' : ''}`} onPointerDown={() => switchHome(i)} />
             ))}
           </div>
-          <p className="mr__story-intro">{STORY_INTRO[locale]}</p>
-          <button className="mr__start-btn" onPointerDown={enterCharacter}>{t('interrogate')} {charData.displayName}</button>
+          {!allDone && <p className="mr__story-intro">{STORY_INTRO[locale]}</p>}
+          {allDone
+            ? <button className="mr__start-btn mr__start-btn--verdict" onPointerDown={() => setPhase('verdict')}>
+                {locale === 'zh' ? '做出判断' : 'Make Your Verdict'}
+              </button>
+            : <button className="mr__start-btn" onPointerDown={enterCharacter}>
+                {t('interrogate')} {charData.displayName}
+              </button>
+          }
         </>
       )}
 
+      {/* ── Intro ── */}
       {phase === 'intro' && quiz && (
         <div className="mr__dialog">
           <p className="mr__dialog-text">{quiz.intro[locale]}</p>
@@ -158,6 +195,7 @@ export default function MoodReader() {
         </div>
       )}
 
+      {/* ── Quiz ── */}
       {phase === 'quiz' && currentQ && (
         <div className="mr__quiz" key={qIndex}>
           <div className="mr__quiz-progress">
@@ -176,10 +214,37 @@ export default function MoodReader() {
         </div>
       )}
 
+      {/* ── Outro ── */}
       {phase === 'outro' && quiz && (
         <div className="mr__dialog">
           <p className="mr__dialog-text">{quiz.outro[locale]}</p>
           <button className="mr__start-btn" onPointerDown={backHome}>{t('back_home')}</button>
+        </div>
+      )}
+
+      {/* ── Verdict ── */}
+      {phase === 'verdict' && (
+        <div className="mr__verdict">
+          <h2 className="mr__verdict-title">{locale === 'zh' ? '你认为真相是——' : 'You believe the truth is—'}</h2>
+          <div className="mr__verdict-options">
+            {ENDINGS.map((e, i) => (
+              <button key={i} className="mr__verdict-btn" onPointerDown={() => chooseEnding(i)}>
+                {e.label[locale]}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Ending ── */}
+      {phase === 'ending' && endingIndex >= 0 && (
+        <div className="mr__ending">
+          <span className="mr__ending-tag">{ENDINGS[endingIndex].tag[locale]}</span>
+          <h3 className="mr__ending-verdict">{ENDINGS[endingIndex].verdict[locale]}</h3>
+          <p className="mr__ending-text">{ENDINGS[endingIndex].text[locale]}</p>
+          <button className="mr__start-btn" onPointerDown={restart}>
+            {locale === 'zh' ? '重新调查' : 'Investigate Again'}
+          </button>
         </div>
       )}
     </div>
