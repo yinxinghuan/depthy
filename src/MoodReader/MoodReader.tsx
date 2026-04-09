@@ -5,7 +5,7 @@ import { CHARACTERS, loadCharacter } from './data/characters';
 import { CHARACTER_QUIZZES, STORY_INTRO } from './data/quiz';
 import { ENDINGS } from './data/endings';
 import type { ExpressionName, CharacterData } from './types';
-import { t, L } from './i18n';
+import { t, L, locale } from './i18n';
 import './MoodReader.less';
 
 type Phase = 'splash' | 'home' | 'intro' | 'quiz' | 'outro' | 'verdict' | 'ending';
