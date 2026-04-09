@@ -6,17 +6,20 @@ import { t } from './i18n';
 import type { CharacterData } from './types';
 import './MoodReader.less';
 
-/** Preload all images in a character's layer data. */
+/** Preload all images with 5s timeout fallback. */
 function preloadImages(char: CharacterData): Promise<void> {
   const srcs = char.layers.map(l => l[0]);
-  return Promise.all(
-    srcs.map(src => new Promise<void>((resolve) => {
-      const img = new Image();
-      img.onload = () => resolve();
-      img.onerror = () => resolve();
-      img.src = src;
-    }))
-  ).then(() => {});
+  const loadOne = (src: string) => new Promise<void>((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve();
+    img.onerror = () => resolve();
+    img.src = src;
+  });
+  // Race against a 5s timeout so we never get stuck
+  return Promise.race([
+    Promise.all(srcs.map(loadOne)).then(() => {}),
+    new Promise<void>(resolve => setTimeout(resolve, 5000)),
+  ]);
 }
 
 export default function MoodReader() {
