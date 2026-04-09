@@ -115,7 +115,7 @@ export default function LayeredCharacter({
   return (
     <div
       className="mr-character"
-      style={{ width, height: Math.round(width * 1.15), overflow: 'hidden', borderRadius: 28 }}
+      style={{ width, height: width, overflow: 'hidden', borderRadius: 28 }}
     >
       <div
         className="mr-character__canvas"

@@ -25,9 +25,16 @@
   max-height: 70vh;
 }
 
-.mr__loading {
-  color: @text-dim;
-  font-size: 14px;
+/* ── Portrait fade-in ── */
+.mr__portrait {
+  opacity: 0;
+  transform: scale(0.97);
+  transition: opacity 0.4s ease-out, transform 0.4s ease-out;
+
+  &--visible {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* ── Controls ── */

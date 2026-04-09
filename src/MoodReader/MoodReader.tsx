@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import LayeredCharacter from './components/LayeredCharacter';
 import { useTilt } from './hooks/useTilt';
 import { CHARACTER_NAMES, loadCharacter } from './data/characters';
@@ -6,42 +6,84 @@ import { t } from './i18n';
 import type { CharacterData } from './types';
 import './MoodReader.less';
 
+/** Preload all images in a character's layer data. Resolves when all loaded. */
+function preloadImages(char: CharacterData): Promise<void> {
+  const srcs = char.layers.map(l => l[0]);
+  return Promise.all(
+    srcs.map(src => new Promise<void>((resolve) => {
+      const img = new Image();
+      img.onload = () => resolve();
+      img.onerror = () => resolve(); // don't block on error
+      img.src = src;
+    }))
+  ).then(() => {});
+}
+
 export default function MoodReader() {
   const [charIndex, setCharIndex] = useState(0);
   const [charData, setCharData] = useState<CharacterData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [ready, setReady] = useState(false);
+  const [visible, setVisible] = useState(false);
   const tilt = useTilt();
+  const cacheRef = useRef<Map<string, CharacterData>>(new Map());
 
   const charName = CHARACTER_NAMES[charIndex];
 
-  // Lazy load character data
+  // Load character module + preload all its images
   useEffect(() => {
-    setLoading(true);
-    loadCharacter(charName).then(data => {
+    let cancelled = false;
+    setVisible(false);
+
+    const load = async () => {
+      // Check cache first
+      let data = cacheRef.current.get(charName);
+      if (!data) {
+        data = await loadCharacter(charName);
+        cacheRef.current.set(charName, data);
+      }
+
+      // Preload all layer images
+      await preloadImages(data);
+
+      if (cancelled) return;
       setCharData(data);
-      setLoading(false);
-    });
+      setReady(true);
+      // Fade in on next frame
+      requestAnimationFrame(() => {
+        if (!cancelled) setVisible(true);
+      });
+    };
+
+    load();
+    return () => { cancelled = true; };
   }, [charName]);
 
-  const prev = () => setCharIndex(i => (i - 1 + CHARACTER_NAMES.length) % CHARACTER_NAMES.length);
-  const next = () => setCharIndex(i => (i + 1) % CHARACTER_NAMES.length);
+  const prev = useCallback(() => {
+    setReady(false);
+    setCharIndex(i => (i - 1 + CHARACTER_NAMES.length) % CHARACTER_NAMES.length);
+  }, []);
+
+  const next = useCallback(() => {
+    setReady(false);
+    setCharIndex(i => (i + 1) % CHARACTER_NAMES.length);
+  }, []);
 
   return (
     <div className="mr">
       {/* Character display */}
       <div className="mr__stage">
-        {loading || !charData ? (
-          <div className="mr__loading">Loading...</div>
-        ) : (
-          <LayeredCharacter
-            key={charData.name}
-            layers={charData.layers}
-            canvasSize={charData.canvasSize}
-            tilt={tilt}
-            width={380}
-            maxShift={35}
-          />
-        )}
+        <div className={`mr__portrait ${visible ? 'mr__portrait--visible' : ''}`}>
+          {ready && charData && (
+            <LayeredCharacter
+              key={charData.name}
+              layers={charData.layers}
+              canvasSize={charData.canvasSize}
+              tilt={tilt}
+              width={380}
+              maxShift={35}
+            />
+          )}
+        </div>
       </div>
 
       {/* Bottom controls */}
@@ -70,7 +112,7 @@ export default function MoodReader() {
           <span
             key={name}
             className={`mr__dot ${i === charIndex ? 'mr__dot--active' : ''}`}
-            onPointerDown={() => setCharIndex(i)}
+            onPointerDown={() => { setReady(false); setCharIndex(i); }}
           />
         ))}
       </div>
