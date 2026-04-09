@@ -25,7 +25,7 @@ export default function MoodReader() {
   const [charIndex, setCharIndex] = useState(0);
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
-  const { tilt, needsPermission, requestGyroPermission } = useTilt();
+  const { tilt, showPermissionButton, requestGyroPermission } = useTilt();
 
   const charName = CHARACTER_NAMES[charIndex];
   const charData = loadCharacter(charName);
@@ -79,8 +79,8 @@ export default function MoodReader() {
         </div>
       </div>
 
-      {needsPermission && (
-        <button className="mr__gyro-btn" onPointerDown={requestGyroPermission}>
+      {showPermissionButton && (
+        <button className="mr__gyro-btn" onClick={requestGyroPermission}>
           {t('enable_gyro')}
         </button>
       )}

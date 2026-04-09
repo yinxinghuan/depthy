@@ -1,7 +1,7 @@
 type Locale = 'zh' | 'en';
 
 const strings: Record<string, Record<Locale, string>> = {
-  hint: { zh: '倾斜设备 / 移动鼠标', en: 'Tilt device / Move mouse' },
+  hint: { zh: '倾斜 / 触摸拖动', en: 'Tilt / Touch drag' },
   enable_gyro: { zh: '点击启用陀螺仪', en: 'Tap to enable gyroscope' },
 };
 

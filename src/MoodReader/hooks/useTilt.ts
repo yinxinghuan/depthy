@@ -2,25 +2,24 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import type { TiltState } from '../types';
 
 /**
- * Track device tilt (gyroscope) on mobile, mouse position on desktop.
- * Returns normalized tilt state: x/y in range [-1, 1].
+ * Track device tilt via gyroscope, mouse, or touch drag.
+ * Priority: gyroscope > touch drag > mouse move
  *
- * iOS 13+ requires explicit permission via user gesture —
- * call requestGyroPermission() from a button tap.
+ * iOS 13+ needs requestPermission() from a user gesture.
+ * Telegram WebView may block gyro entirely — touch drag is the fallback.
  */
 export function useTilt() {
   const [tilt, setTilt] = useState<TiltState>({ x: 0, y: 0 });
-  const [gyroGranted, setGyroGranted] = useState(false);
+  const [permissionState, setPermissionState] = useState<'pending' | 'requesting' | 'granted' | 'denied' | 'unavailable'>('pending');
   const hasGyro = useRef(false);
   const baseGamma = useRef<number | null>(null);
   const baseBeta = useRef<number | null>(null);
-  const listenersAttached = useRef(false);
 
-  const handler = useCallback((e: DeviceOrientationEvent) => {
+  // ── Gyroscope handler ──
+  const gyroHandler = useCallback((e: DeviceOrientationEvent) => {
     if (e.gamma === null || e.beta === null) return;
     hasGyro.current = true;
 
-    // Calibrate on first reading
     if (baseGamma.current === null) {
       baseGamma.current = e.gamma;
       baseBeta.current = e.beta;
@@ -29,70 +28,109 @@ export function useTilt() {
     const gamma = e.gamma - baseGamma.current!;
     const beta = e.beta - baseBeta.current!;
     const maxAngle = 25;
-    const x = Math.max(-1, Math.min(1, gamma / maxAngle));
-    const y = Math.max(-1, Math.min(1, beta / maxAngle));
-
-    setTilt({ x, y });
+    setTilt({
+      x: Math.max(-1, Math.min(1, gamma / maxAngle)),
+      y: Math.max(-1, Math.min(1, beta / maxAngle)),
+    });
   }, []);
 
-  // Attach listener (non-iOS or after permission granted)
+  // ── Check if iOS permission is needed ──
+  const iosNeedsPermission = typeof DeviceOrientationEvent !== 'undefined' &&
+    typeof (DeviceOrientationEvent as any).requestPermission === 'function';
+
+  // ── Auto-attach for non-iOS (Android, desktop) ──
   useEffect(() => {
-    if (listenersAttached.current) return;
+    if (iosNeedsPermission) return;
 
-    const needsPermission = typeof DeviceOrientationEvent !== 'undefined' &&
-      typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission === 'function';
+    window.addEventListener('deviceorientation', gyroHandler);
 
-    if (!needsPermission) {
-      // Android / desktop — just attach
-      window.addEventListener('deviceorientation', handler);
-      listenersAttached.current = true;
-      return () => window.removeEventListener('deviceorientation', handler);
-    }
+    // If no gyro events after 1s, mark as unavailable
+    const timer = setTimeout(() => {
+      if (!hasGyro.current) setPermissionState('unavailable');
+      else setPermissionState('granted');
+    }, 1000);
 
-    // iOS — wait for gyroGranted flag
-    if (gyroGranted) {
-      window.addEventListener('deviceorientation', handler);
-      listenersAttached.current = true;
-      return () => window.removeEventListener('deviceorientation', handler);
-    }
-  }, [handler, gyroGranted]);
+    return () => {
+      window.removeEventListener('deviceorientation', gyroHandler);
+      clearTimeout(timer);
+    };
+  }, [gyroHandler, iosNeedsPermission]);
 
-  // Request gyroscope permission (must be called from user gesture)
+  // ── Attach after iOS permission granted ──
+  useEffect(() => {
+    if (permissionState !== 'granted' || !iosNeedsPermission) return;
+
+    window.addEventListener('deviceorientation', gyroHandler);
+
+    // Check if events actually fire
+    const timer = setTimeout(() => {
+      if (!hasGyro.current) setPermissionState('unavailable');
+    }, 1500);
+
+    return () => {
+      window.removeEventListener('deviceorientation', gyroHandler);
+      clearTimeout(timer);
+    };
+  }, [permissionState, gyroHandler, iosNeedsPermission]);
+
+  // ── Request iOS permission (must be from user gesture) ──
   const requestGyroPermission = useCallback(async () => {
-    const DOE = DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> };
-    if (typeof DOE.requestPermission === 'function') {
-      try {
-        const result = await DOE.requestPermission();
-        if (result === 'granted') {
-          setGyroGranted(true);
-          return true;
-        }
-      } catch {
-        // User denied or error
+    setPermissionState('requesting');
+    try {
+      const result = await (DeviceOrientationEvent as any).requestPermission();
+      if (result === 'granted') {
+        setPermissionState('granted');
+        return;
       }
-      return false;
-    }
-    // Non-iOS — already works
-    return true;
+    } catch { /* denied or error */ }
+    setPermissionState('unavailable');
   }, []);
 
-  // Check if iOS permission is needed
-  const needsPermission = typeof DeviceOrientationEvent !== 'undefined' &&
-    typeof (DeviceOrientationEvent as unknown as { requestPermission?: () => Promise<string> }).requestPermission === 'function' &&
-    !gyroGranted;
-
-  // Mouse tracking (desktop fallback)
-  const onMouseMove = useCallback((e: MouseEvent) => {
-    if (hasGyro.current) return;
-    const x = (e.clientX / window.innerWidth - 0.5) * 2;
-    const y = (e.clientY / window.innerHeight - 0.5) * 2;
-    setTilt({ x, y });
-  }, []);
-
+  // ── Mouse tracking (desktop) ──
   useEffect(() => {
-    window.addEventListener('mousemove', onMouseMove);
-    return () => window.removeEventListener('mousemove', onMouseMove);
-  }, [onMouseMove]);
+    const handler = (e: MouseEvent) => {
+      if (hasGyro.current) return;
+      setTilt({
+        x: (e.clientX / window.innerWidth - 0.5) * 2,
+        y: (e.clientY / window.innerHeight - 0.5) * 2,
+      });
+    };
+    window.addEventListener('mousemove', handler);
+    return () => window.removeEventListener('mousemove', handler);
+  }, []);
 
-  return { tilt, needsPermission, requestGyroPermission };
+  // ── Touch drag fallback (mobile without gyro) ──
+  useEffect(() => {
+    let startX = 0, startY = 0;
+    let currentX = 0, currentY = 0;
+
+    const onStart = (e: TouchEvent) => {
+      if (hasGyro.current) return;
+      const t = e.touches[0];
+      startX = t.clientX - currentX * window.innerWidth * 0.5;
+      startY = t.clientY - currentY * window.innerHeight * 0.5;
+    };
+
+    const onMove = (e: TouchEvent) => {
+      if (hasGyro.current) return;
+      const t = e.touches[0];
+      const dx = (t.clientX - startX) / (window.innerWidth * 0.5);
+      const dy = (t.clientY - startY) / (window.innerHeight * 0.5);
+      currentX = Math.max(-1, Math.min(1, dx));
+      currentY = Math.max(-1, Math.min(1, dy));
+      setTilt({ x: currentX, y: currentY });
+    };
+
+    window.addEventListener('touchstart', onStart, { passive: true });
+    window.addEventListener('touchmove', onMove, { passive: true });
+    return () => {
+      window.removeEventListener('touchstart', onStart);
+      window.removeEventListener('touchmove', onMove);
+    };
+  }, []);
+
+  // Show permission button only when iOS needs it and hasn't been tried
+  const showPermissionButton = iosNeedsPermission && permissionState === 'pending';
+
+  return { tilt, showPermissionButton, requestGyroPermission };
 }
