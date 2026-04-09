@@ -2,26 +2,22 @@ import React, { forwardRef, useEffect, useState } from 'react';
 import posterSrc from '../img/poster.png';
 import './SplashScreen.less';
 
-// Import all character modules to collect image srcs for preloading
+// Only preload the first character (Isaya neutral) during splash
+// Other characters load on-demand when selected
 import isaya from '../data/char_isaya';
-import jenny from '../data/char_jenny';
-import algram from '../data/char_algram';
-import isabel from '../data/char_isabel';
 
-function getAllImageSrcs(): string[] {
+function getFirstCharSrcs(): string[] {
   const srcs = new Set<string>();
-  for (const char of [isaya, jenny, algram, isabel]) {
-    srcs.add(char.bgSrc);
-    for (const layers of Object.values(char.expressions)) {
-      for (const l of layers) srcs.add(l[0]);
-    }
-  }
+  srcs.add(isaya.bgSrc);
+  // Only neutral expression for splash — others load when entering quiz
+  const neutral = isaya.expressions.neutral;
+  if (neutral) for (const l of neutral) srcs.add(l[0]);
   return [...srcs];
 }
 
-const PRELOAD = getAllImageSrcs();
+const PRELOAD = getFirstCharSrcs();
 const MIN_MS = 2000;
-const MAX_ASSET_MS = 15000;
+const MAX_ASSET_MS = 8000;
 
 interface Props { onDone: () => void; }
 
