@@ -1,0 +1,69 @@
+.mr-character {
+  position: relative;
+  user-select: none;
+}
+
+.mr-character__canvas {
+  position: relative;
+}
+
+.mr-layer {
+  position: absolute;
+}
+
+/* ── Hair sway ── */
+.mr-back-hair {
+  transform-origin: top center;
+  animation: mr-hair-back 4.5s ease-in-out infinite;
+}
+
+.mr-front-hair {
+  transform-origin: top center;
+  animation: mr-hair-front 3.8s ease-in-out infinite;
+}
+
+@keyframes mr-hair-back {
+  0%, 100% { transform: rotate(0deg) translateX(0px); }
+  40%       { transform: rotate(1.2deg) translateX(2px); }
+  70%       { transform: rotate(-0.6deg) translateX(-1px); }
+}
+
+@keyframes mr-hair-front {
+  0%, 100% { transform: rotate(0deg) translateX(0px); }
+  35%       { transform: rotate(-1deg) translateX(-2px); }
+  65%       { transform: rotate(0.5deg) translateX(1px); }
+}
+
+/* ── Headwear bob ── */
+.mr-headwear {
+  transform-origin: bottom center;
+  animation: mr-hw-bob 4.5s ease-in-out infinite;
+}
+
+@keyframes mr-hw-bob {
+  0%, 100% { transform: rotate(0deg); }
+  40%       { transform: rotate(0.6deg); }
+  70%       { transform: rotate(-0.3deg); }
+}
+
+/* ── Arms sway ── */
+.mr-handwear {
+  transform-origin: top center;
+  animation: mr-arms-sway 4s ease-in-out infinite;
+}
+
+@keyframes mr-arms-sway {
+  0%, 100% { transform: rotate(0deg) translateX(0px); }
+  30%       { transform: rotate(1.2deg) translateX(2px); }
+  70%       { transform: rotate(-0.9deg) translateX(-2px); }
+}
+
+/* ── Eyelash blink origin ── */
+.mr-eyelash {
+  transform-origin: bottom center;
+}
+
+/* ── SVG mouth ── */
+.mr-mouth-svg {
+  overflow: visible;
+}
