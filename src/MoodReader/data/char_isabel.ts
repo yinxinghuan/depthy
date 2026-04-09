@@ -26,13 +26,13 @@ import happy_06_face from '../img/isabel/expr_happy/06_face.png';
 import happy_04_ears_r from '../img/isabel/expr_happy/04_ears-r.png';
 import happy_05_ears_l from '../img/isabel/expr_happy/05_ears-l.png';
 import happy_03_earwear from '../img/isabel/expr_happy/03_earwear.png';
-import happy_08_eyelash_r from '../img/isabel/expr_happy/08_eyelash-r.png';
-import happy_09_eyelash_l from '../img/isabel/expr_happy/09_eyelash-l.png';
+import happy_09_eyelash_r from '../img/isabel/expr_happy/09_eyelash-r.png';
+import happy_10_eyelash_l from '../img/isabel/expr_happy/10_eyelash-l.png';
 import happy_11_eyebrow_r from '../img/isabel/expr_happy/11_eyebrow-r.png';
-import happy_13_eyebrow_l from '../img/isabel/expr_happy/13_eyebrow-l.png';
-import happy_10_nose from '../img/isabel/expr_happy/10_nose.png';
+import happy_12_eyebrow_l from '../img/isabel/expr_happy/12_eyebrow-l.png';
+import happy_08_nose from '../img/isabel/expr_happy/08_nose.png';
 import happy_07_mouth from '../img/isabel/expr_happy/07_mouth.png';
-import happy_12_front_hair from '../img/isabel/expr_happy/12_front_hair.png';
+import happy_13_front_hair from '../img/isabel/expr_happy/13_front_hair.png';
 import sad_01_back_hair from '../img/isabel/expr_sad/01_back_hair.png';
 import sad_03_topwear from '../img/isabel/expr_sad/03_topwear.png';
 import sad_02_neck from '../img/isabel/expr_sad/02_neck.png';
@@ -71,24 +71,25 @@ import surprised_09_nose from '../img/isabel/expr_surprised/09_nose.png';
 import surprised_10_mouth from '../img/isabel/expr_surprised/10_mouth.png';
 import surprised_19_handwear_r from '../img/isabel/expr_surprised/19_handwear-r.png';
 import surprised_04_front_hair from '../img/isabel/expr_surprised/04_front_hair.png';
-import angry_00_back_hair from '../img/isabel/expr_angry/00_back_hair.png';
-import angry_02_topwear from '../img/isabel/expr_angry/02_topwear.png';
-import angry_01_neck from '../img/isabel/expr_angry/01_neck.png';
-import angry_06_face from '../img/isabel/expr_angry/06_face.png';
-import angry_04_ears_r from '../img/isabel/expr_angry/04_ears-r.png';
-import angry_05_ears_l from '../img/isabel/expr_angry/05_ears-l.png';
-import angry_03_earwear from '../img/isabel/expr_angry/03_earwear.png';
+import angry_01_back_hair from '../img/isabel/expr_angry/01_back_hair.png';
+import angry_03_topwear from '../img/isabel/expr_angry/03_topwear.png';
+import angry_02_neck from '../img/isabel/expr_angry/02_neck.png';
+import angry_08_face from '../img/isabel/expr_angry/08_face.png';
+import angry_06_ears_r from '../img/isabel/expr_angry/06_ears-r.png';
+import angry_07_ears_l from '../img/isabel/expr_angry/07_ears-l.png';
+import angry_04_earwear from '../img/isabel/expr_angry/04_earwear.png';
 import angry_11_eyewhite_r from '../img/isabel/expr_angry/11_eyewhite-r.png';
 import angry_12_eyewhite_l from '../img/isabel/expr_angry/12_eyewhite-l.png';
-import angry_13_irides_r from '../img/isabel/expr_angry/13_irides-r.png';
-import angry_09_irides_l from '../img/isabel/expr_angry/09_irides-l.png';
-import angry_15_eyelash_r from '../img/isabel/expr_angry/15_eyelash-r.png';
-import angry_10_eyelash_l from '../img/isabel/expr_angry/10_eyelash-l.png';
-import angry_17_eyebrow_r from '../img/isabel/expr_angry/17_eyebrow-r.png';
-import angry_14_eyebrow_l from '../img/isabel/expr_angry/14_eyebrow-l.png';
-import angry_08_nose from '../img/isabel/expr_angry/08_nose.png';
-import angry_07_mouth from '../img/isabel/expr_angry/07_mouth.png';
-import angry_16_front_hair from '../img/isabel/expr_angry/16_front_hair.png';
+import angry_14_irides_r from '../img/isabel/expr_angry/14_irides-r.png';
+import angry_13_irides_l from '../img/isabel/expr_angry/13_irides-l.png';
+import angry_17_eyelash_r from '../img/isabel/expr_angry/17_eyelash-r.png';
+import angry_15_eyelash_l from '../img/isabel/expr_angry/15_eyelash-l.png';
+import angry_18_eyebrow_r from '../img/isabel/expr_angry/18_eyebrow-r.png';
+import angry_16_eyebrow_l from '../img/isabel/expr_angry/16_eyebrow-l.png';
+import angry_10_nose from '../img/isabel/expr_angry/10_nose.png';
+import angry_09_mouth from '../img/isabel/expr_angry/09_mouth.png';
+import angry_05_handwear_r from '../img/isabel/expr_angry/05_handwear-r.png';
+import angry_19_front_hair from '../img/isabel/expr_angry/19_front_hair.png';
 
 const data: CharacterData = {
   name: 'isabel',
@@ -120,17 +121,17 @@ const data: CharacterData = {
       [happy_00_back_hair, 0, 0, 1280, 1280, 'mr-back-hair', ''],
       [happy_02_topwear, 0, 0, 1280, 1280, '', ''],
       [happy_01_neck, 0, 0, 1280, 1280, '', ''],
-      [happy_06_face, 462, 209, 327, 420, '', ''],
-      [happy_04_ears_r, 453, 410, 62, 107, '', ''],
-      [happy_05_ears_l, 764, 374, 59, 120, '', ''],
+      [happy_06_face, 462, 210, 327, 418, '', ''],
+      [happy_04_ears_r, 453, 410, 63, 106, '', ''],
+      [happy_05_ears_l, 764, 374, 59, 119, '', ''],
       [happy_03_earwear, 470, 470, 334, 105, '', ''],
-      [happy_08_eyelash_r, 503, 409, 90, 32, '', 'eyelash-r'],
-      [happy_09_eyelash_l, 661, 392, 91, 34, '', 'eyelash-l'],
-      [happy_11_eyebrow_r, 481, 353, 110, 27, '', 'eyebrow-r'],
-      [happy_13_eyebrow_l, 649, 338, 120, 29, '', 'eyebrow-l'],
-      [happy_10_nose, 608, 439, 47, 69, '', 'nose'],
-      [happy_07_mouth, 576, 519, 124, 52, '', 'mouth'],
-      [happy_12_front_hair, 0, 0, 1280, 1280, 'mr-front-hair', ''],
+      [happy_09_eyelash_r, 503, 409, 90, 32, '', 'eyelash-r'],
+      [happy_10_eyelash_l, 661, 392, 91, 34, '', 'eyelash-l'],
+      [happy_11_eyebrow_r, 482, 353, 110, 27, '', 'eyebrow-r'],
+      [happy_12_eyebrow_l, 649, 338, 119, 32, '', 'eyebrow-l'],
+      [happy_08_nose, 607, 457, 47, 51, '', 'nose'],
+      [happy_07_mouth, 575, 521, 122, 50, '', 'mouth'],
+      [happy_13_front_hair, 0, 0, 1280, 1280, 'mr-front-hair', ''],
     ],
     sad: [
       [sad_01_back_hair, 0, 0, 1280, 1280, 'mr-back-hair', ''],
@@ -175,24 +176,25 @@ const data: CharacterData = {
       [surprised_04_front_hair, 0, 0, 1280, 1280, 'mr-front-hair', ''],
     ],
     angry: [
-      [angry_00_back_hair, 0, 0, 1280, 1280, 'mr-back-hair', ''],
-      [angry_02_topwear, 0, 0, 1280, 1280, '', ''],
-      [angry_01_neck, 0, 0, 1280, 1280, '', ''],
-      [angry_06_face, 421, 241, 424, 559, '', ''],
-      [angry_04_ears_r, 398, 482, 77, 153, '', ''],
-      [angry_05_ears_l, 813, 465, 73, 150, '', ''],
-      [angry_03_earwear, 423, 586, 440, 134, '', ''],
-      [angry_11_eyewhite_r, 480, 486, 102, 40, '', 'eyewhite-r'],
-      [angry_12_eyewhite_l, 691, 476, 106, 42, '', 'eyewhite-l'],
-      [angry_13_irides_r, 510, 483, 56, 40, '', 'irides-r'],
-      [angry_09_irides_l, 709, 476, 58, 40, '', 'irides-l'],
-      [angry_15_eyelash_r, 452, 470, 141, 65, '', 'eyelash-r'],
-      [angry_10_eyelash_l, 680, 462, 138, 63, '', 'eyelash-l'],
-      [angry_17_eyebrow_r, 445, 440, 176, 60, '', 'eyebrow-r'],
-      [angry_14_eyebrow_l, 659, 432, 170, 60, '', 'eyebrow-l'],
-      [angry_08_nose, 602, 552, 68, 95, '', 'nose'],
-      [angry_07_mouth, 575, 673, 136, 57, '', 'mouth'],
-      [angry_16_front_hair, 0, 0, 1280, 1280, 'mr-front-hair', ''],
+      [angry_01_back_hair, 0, 0, 1280, 1280, 'mr-back-hair', ''],
+      [angry_03_topwear, 0, 0, 1280, 1280, '', ''],
+      [angry_02_neck, 0, 0, 1280, 1280, '', ''],
+      [angry_08_face, 461, 201, 328, 433, '', ''],
+      [angry_06_ears_r, 450, 402, 64, 114, '', ''],
+      [angry_07_ears_l, 765, 373, 59, 120, '', ''],
+      [angry_04_earwear, 470, 470, 334, 105, '', ''],
+      [angry_11_eyewhite_r, 510, 403, 77, 30, '', 'eyewhite-r'],
+      [angry_12_eyewhite_l, 667, 391, 83, 33, '', 'eyewhite-l'],
+      [angry_14_irides_r, 530, 401, 44, 30, '', 'irides-r'],
+      [angry_13_irides_l, 688, 390, 42, 33, '', 'irides-l'],
+      [angry_17_eyelash_r, 488, 392, 106, 46, '', 'eyelash-r'],
+      [angry_15_eyelash_l, 661, 382, 103, 45, '', 'eyelash-l'],
+      [angry_18_eyebrow_r, 490, 367, 117, 47, '', 'eyebrow-r'],
+      [angry_16_eyebrow_l, 647, 355, 117, 55, '', 'eyebrow-l'],
+      [angry_10_nose, 606, 427, 55, 103, '', 'nose'],
+      [angry_09_mouth, 588, 537, 100, 44, '', 'mouth'],
+      [angry_05_handwear_r, 834, 1085, 230, 126, 'mr-handwear', ''],
+      [angry_19_front_hair, 0, 0, 1280, 1280, 'mr-front-hair', ''],
     ],
   },
 };
