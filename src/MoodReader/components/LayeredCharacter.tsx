@@ -122,8 +122,8 @@ export default function LayeredCharacter({
         style={{
           width: canvasSize,
           height: canvasSize,
-          transform: `scale(${scale * 1.1})`,
-          transformOrigin: 'center center',
+          transform: `scale(${scale * 1.1}) translate(-${Math.round(canvasSize * 0.045)}px, -${Math.round(canvasSize * 0.045)}px)`,
+          transformOrigin: 'top left',
         }}
       >
         {layers.map(([filename, , , , , cls, id], i) => {
