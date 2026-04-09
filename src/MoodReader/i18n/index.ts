@@ -3,6 +3,9 @@ type Locale = 'zh' | 'en';
 const strings: Record<string, Record<Locale, string>> = {
   hint: { zh: '倾斜 / 触摸拖动', en: 'Tilt / Touch drag' },
   enable_gyro: { zh: '点击启用陀螺仪', en: 'Tap to enable gyroscope' },
+  start_quiz: { zh: '测测你像谁', en: 'Take the Quiz' },
+  result_you_are: { zh: '你最像', en: 'You are most like' },
+  back: { zh: '再测一次', en: 'Try Again' },
 };
 
 function detectLocale(): Locale {
@@ -13,10 +16,8 @@ function detectLocale(): Locale {
 
 const locale = detectLocale();
 
-export function t(key: string, vars?: { n?: number | string }): string {
+export function t(key: string): string {
   const entry = strings[key];
   if (!entry) return key;
-  let s = entry[locale] ?? entry.zh;
-  if (vars?.n !== undefined) s = s.replace('{n}', String(vars.n));
-  return s;
+  return entry[locale] ?? entry.zh;
 }
