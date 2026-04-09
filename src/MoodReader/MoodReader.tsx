@@ -1,30 +1,47 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import LayeredCharacter from './components/LayeredCharacter';
 import { useTilt } from './hooks/useTilt';
-import { CHARACTERS } from './data/characters';
+import { CHARACTER_NAMES, loadCharacter } from './data/characters';
 import { t } from './i18n';
+import type { CharacterData } from './types';
 import './MoodReader.less';
 
 export default function MoodReader() {
   const [charIndex, setCharIndex] = useState(0);
+  const [charData, setCharData] = useState<CharacterData | null>(null);
+  const [loading, setLoading] = useState(true);
   const tilt = useTilt();
-  const char = CHARACTERS[charIndex];
 
-  const prev = () => setCharIndex(i => (i - 1 + CHARACTERS.length) % CHARACTERS.length);
-  const next = () => setCharIndex(i => (i + 1) % CHARACTERS.length);
+  const charName = CHARACTER_NAMES[charIndex];
+
+  // Lazy load character data
+  useEffect(() => {
+    setLoading(true);
+    loadCharacter(charName).then(data => {
+      setCharData(data);
+      setLoading(false);
+    });
+  }, [charName]);
+
+  const prev = () => setCharIndex(i => (i - 1 + CHARACTER_NAMES.length) % CHARACTER_NAMES.length);
+  const next = () => setCharIndex(i => (i + 1) % CHARACTER_NAMES.length);
 
   return (
     <div className="mr">
       {/* Character display */}
       <div className="mr__stage">
-        <LayeredCharacter
-          key={char.name}
-          layers={char.layers}
-          canvasSize={char.canvasSize}
-          tilt={tilt}
-          width={400}
-          maxShift={35}
-        />
+        {loading || !charData ? (
+          <div className="mr__loading">Loading...</div>
+        ) : (
+          <LayeredCharacter
+            key={charData.name}
+            layers={charData.layers}
+            canvasSize={charData.canvasSize}
+            tilt={tilt}
+            width={380}
+            maxShift={35}
+          />
+        )}
       </div>
 
       {/* Bottom controls */}
@@ -36,7 +53,7 @@ export default function MoodReader() {
         </button>
 
         <div className="mr__info">
-          <span className="mr__name">{char.displayName}</span>
+          <span className="mr__name">{charData?.displayName ?? '...'}</span>
           <span className="mr__hint">{t('hint')}</span>
         </div>
 
@@ -49,9 +66,9 @@ export default function MoodReader() {
 
       {/* Dots indicator */}
       <div className="mr__dots">
-        {CHARACTERS.map((c, i) => (
+        {CHARACTER_NAMES.map((name, i) => (
           <span
-            key={c.name}
+            key={name}
             className={`mr__dot ${i === charIndex ? 'mr__dot--active' : ''}`}
             onPointerDown={() => setCharIndex(i)}
           />
