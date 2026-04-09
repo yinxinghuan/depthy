@@ -18,10 +18,23 @@
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  transition: opacity 0.4s ease-in-out;
 }
-.mr-expr-prev { pointer-events: none; }
-.mr-expr-entering { opacity: 1 !important; }
+.mr-expr-prev {
+  pointer-events: none;
+  animation: mr-expr-fadeout 0.4s ease-in-out forwards;
+}
+.mr-expr-current {
+  animation: mr-expr-fadein 0.4s ease-in-out forwards;
+}
+
+@keyframes mr-expr-fadeout {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+@keyframes mr-expr-fadein {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
 
 .mr-layer {
   position: absolute;

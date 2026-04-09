@@ -8,8 +8,8 @@ import './MoodReader.less';
 
 type Phase = 'home' | 'intro' | 'quiz' | 'outro';
 
+/** Preload ALL expression images upfront to prevent flash on switch. */
 function preloadImages(char: CharacterData): Promise<void> {
-  // Preload all expression layers + background
   const allSrcs = new Set<string>();
   allSrcs.add(char.bgSrc);
   for (const layers of Object.values(char.expressions)) {
@@ -21,9 +21,10 @@ function preloadImages(char: CharacterData): Promise<void> {
     img.onerror = () => resolve();
     img.src = src;
   });
+  // Load all expressions upfront, 12s timeout for all ~90 images
   return Promise.race([
     Promise.all([...allSrcs].map(loadOne)).then(() => {}),
-    new Promise<void>(resolve => setTimeout(resolve, 8000)),
+    new Promise<void>(resolve => setTimeout(resolve, 12000)),
   ]);
 }
 
@@ -76,27 +77,27 @@ export default function MoodReader() {
 
   const startQuiz = useCallback(() => {
     setPhase('quiz');
-    if (currentQ) setExpression(currentQ.askExpr as ExpressionName);
+    setExpression('neutral');
     setReactionText(''); setAnswered(false);
-  }, [currentQ]);
+  }, []);
 
   const answer = useCallback((optIdx: number) => {
     if (answered || !currentQ) return;
     setAnswered(true);
     const opt = currentQ.options[optIdx];
+    // Switch expression — stays until next answer
     setExpression(opt.reaction as ExpressionName);
     setReactionText(opt.reactionText?.[locale] ?? '');
 
     setTimeout(() => {
+      // Clear bubble, advance question, but KEEP current expression
+      setReactionText('');
       if (qIndex < quiz.questions.length - 1) {
-        const nextQ = quiz.questions[qIndex + 1];
         setQIndex(qIndex + 1);
-        setExpression(nextQ.askExpr as ExpressionName);
-        setReactionText(''); setAnswered(false);
+        setAnswered(false);
       } else {
         setPhase('outro');
         setExpression(quiz.outroExpr as ExpressionName);
-        setReactionText('');
       }
     }, 1800);
   }, [answered, currentQ, qIndex, quiz]);

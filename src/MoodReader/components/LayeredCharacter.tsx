@@ -176,18 +176,15 @@ export default function LayeredCharacter({
           }}
         />
 
-        {/* Previous expression (fading out during transition) */}
+        {/* Previous expression (fading out) */}
         {transitioning && prevExpr !== expression && (
-          <div className="mr-expr-layer mr-expr-prev" style={{ opacity: 0 }}>
+          <div className="mr-expr-layer mr-expr-prev">
             {renderLayers(prevLayers)}
           </div>
         )}
 
-        {/* Current expression (fading in) */}
-        <div
-          className={`mr-expr-layer mr-expr-current ${transitioning ? 'mr-expr-entering' : ''}`}
-          style={{ opacity: transitioning ? 0 : 1 }}
-        >
+        {/* Current expression (always visible, fading in over prev) */}
+        <div className="mr-expr-layer mr-expr-current">
           {renderLayers(currentLayers)}
         </div>
       </div>
