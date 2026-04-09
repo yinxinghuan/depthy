@@ -36,8 +36,6 @@ import happy_12_front_hair from '../img/isabel/expr_happy/12_front_hair.png';
 import sad_01_back_hair from '../img/isabel/expr_sad/01_back_hair.png';
 import sad_03_topwear from '../img/isabel/expr_sad/03_topwear.png';
 import sad_02_neck from '../img/isabel/expr_sad/02_neck.png';
-import sad_19_handwear_r from '../img/isabel/expr_sad/19_handwear-r.png';
-import sad_00_handwear_l from '../img/isabel/expr_sad/00_handwear-l.png';
 import sad_05_face from '../img/isabel/expr_sad/05_face.png';
 import sad_06_ears_r from '../img/isabel/expr_sad/06_ears-r.png';
 import sad_07_ears_l from '../img/isabel/expr_sad/07_ears-l.png';
@@ -56,8 +54,6 @@ import sad_16_front_hair from '../img/isabel/expr_sad/16_front_hair.png';
 import surprised_01_back_hair from '../img/isabel/expr_surprised/01_back_hair.png';
 import surprised_02_topwear from '../img/isabel/expr_surprised/02_topwear.png';
 import surprised_03_neck from '../img/isabel/expr_surprised/03_neck.png';
-import surprised_19_handwear_r from '../img/isabel/expr_surprised/19_handwear-r.png';
-import surprised_00_handwear_l from '../img/isabel/expr_surprised/00_handwear-l.png';
 import surprised_08_face from '../img/isabel/expr_surprised/08_face.png';
 import surprised_06_ears_r from '../img/isabel/expr_surprised/06_ears-r.png';
 import surprised_07_ears_l from '../img/isabel/expr_surprised/07_ears-l.png';
@@ -138,8 +134,6 @@ const data: CharacterData = {
       [sad_01_back_hair, 0, 0, 1280, 1280, 'mr-back-hair', ''],
       [sad_03_topwear, 0, 0, 1280, 1280, '', ''],
       [sad_02_neck, 0, 0, 1280, 1280, '', ''],
-      [sad_19_handwear_r, 360, 513, 249, 697, 'mr-handwear', ''],
-      [sad_00_handwear_l, 1266, 1265, 8, 13, 'mr-handwear', ''],
       [sad_05_face, 411, 244, 405, 514, '', ''],
       [sad_06_ears_r, 411, 492, 70, 138, '', ''],
       [sad_07_ears_l, 782, 462, 78, 135, '', ''],
@@ -160,8 +154,6 @@ const data: CharacterData = {
       [surprised_01_back_hair, 0, 0, 1280, 1280, 'mr-back-hair', ''],
       [surprised_02_topwear, 0, 0, 1280, 1280, '', ''],
       [surprised_03_neck, 0, 0, 1280, 1280, '', ''],
-      [surprised_19_handwear_r, 573, 639, 368, 571, 'mr-handwear', ''],
-      [surprised_00_handwear_l, 1266, 1265, 9, 13, 'mr-handwear', ''],
       [surprised_08_face, 424, 213, 415, 570, '', ''],
       [surprised_06_ears_r, 401, 486, 77, 146, '', ''],
       [surprised_07_ears_l, 809, 463, 74, 150, '', ''],
