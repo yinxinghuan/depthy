@@ -6,14 +6,14 @@ import { t } from './i18n';
 import type { CharacterData } from './types';
 import './MoodReader.less';
 
-/** Preload all images in a character's layer data. Resolves when all loaded. */
+/** Preload all images in a character's layer data. */
 function preloadImages(char: CharacterData): Promise<void> {
   const srcs = char.layers.map(l => l[0]);
   return Promise.all(
     srcs.map(src => new Promise<void>((resolve) => {
       const img = new Image();
       img.onload = () => resolve();
-      img.onerror = () => resolve(); // don't block on error
+      img.onerror = () => resolve();
       img.src = src;
     }))
   ).then(() => {});
@@ -24,31 +24,25 @@ export default function MoodReader() {
   const [charData, setCharData] = useState<CharacterData | null>(null);
   const [ready, setReady] = useState(false);
   const [visible, setVisible] = useState(false);
-  const tilt = useTilt();
+  const { tilt, needsPermission, requestGyroPermission } = useTilt();
   const cacheRef = useRef<Map<string, CharacterData>>(new Map());
 
   const charName = CHARACTER_NAMES[charIndex];
 
-  // Load character module + preload all its images
   useEffect(() => {
     let cancelled = false;
     setVisible(false);
 
     const load = async () => {
-      // Check cache first
       let data = cacheRef.current.get(charName);
       if (!data) {
         data = await loadCharacter(charName);
         cacheRef.current.set(charName, data);
       }
-
-      // Preload all layer images
       await preloadImages(data);
-
       if (cancelled) return;
       setCharData(data);
       setReady(true);
-      // Fade in on next frame
       requestAnimationFrame(() => {
         if (!cancelled) setVisible(true);
       });
@@ -58,20 +52,27 @@ export default function MoodReader() {
     return () => { cancelled = true; };
   }, [charName]);
 
-  const prev = useCallback(() => {
+  const switchChar = useCallback((i: number) => {
     setReady(false);
-    setCharIndex(i => (i - 1 + CHARACTER_NAMES.length) % CHARACTER_NAMES.length);
+    setCharIndex(i);
   }, []);
 
-  const next = useCallback(() => {
-    setReady(false);
-    setCharIndex(i => (i + 1) % CHARACTER_NAMES.length);
-  }, []);
+  const prev = useCallback(() => switchChar((charIndex - 1 + CHARACTER_NAMES.length) % CHARACTER_NAMES.length), [charIndex, switchChar]);
+  const next = useCallback(() => switchChar((charIndex + 1) % CHARACTER_NAMES.length), [charIndex, switchChar]);
+
+  const handleGyroRequest = useCallback(async () => {
+    await requestGyroPermission();
+  }, [requestGyroPermission]);
 
   return (
     <div className="mr">
-      {/* Character display */}
       <div className="mr__stage">
+        {/* Loading shimmer placeholder */}
+        {!ready && (
+          <div className="mr__shimmer" style={{ width: 380, height: 380, borderRadius: 28 }} />
+        )}
+
+        {/* Character portrait with fade-in */}
         <div className={`mr__portrait ${visible ? 'mr__portrait--visible' : ''}`}>
           {ready && charData && (
             <LayeredCharacter
@@ -86,7 +87,13 @@ export default function MoodReader() {
         </div>
       </div>
 
-      {/* Bottom controls */}
+      {/* iOS gyro permission button */}
+      {needsPermission && (
+        <button className="mr__gyro-btn" onPointerDown={handleGyroRequest}>
+          {t('enable_gyro')}
+        </button>
+      )}
+
       <div className="mr__controls">
         <button className="mr__nav" onPointerDown={prev}>
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -106,13 +113,12 @@ export default function MoodReader() {
         </button>
       </div>
 
-      {/* Dots indicator */}
       <div className="mr__dots">
         {CHARACTER_NAMES.map((name, i) => (
           <span
             key={name}
             className={`mr__dot ${i === charIndex ? 'mr__dot--active' : ''}`}
-            onPointerDown={() => { setReady(false); setCharIndex(i); }}
+            onPointerDown={() => switchChar(i)}
           />
         ))}
       </div>
