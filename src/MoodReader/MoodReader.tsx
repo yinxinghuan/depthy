@@ -91,19 +91,19 @@ export default function MoodReader() {
     const opt = currentQ.options[optIdx];
     setExpression(opt.reaction);
     setReactionText(opt.reactionText ? L(opt.reactionText) : '');
+  }, [answered, currentQ]);
 
-    setTimeout(() => {
-      setReactionText('');
-      if (qIndex < quiz.questions.length - 1) {
-        setQIndex(qIndex + 1);
-        setAnswered(false);
-      } else {
-        setPhase('outro');
-        setExpression(quiz.outroExpr);
-        setInterrogated(prev => new Set([...prev, activeChar]));
-      }
-    }, 2200);
-  }, [answered, currentQ, qIndex, quiz, activeChar]);
+  const nextQuestion = useCallback(() => {
+    setReactionText('');
+    if (qIndex < quiz.questions.length - 1) {
+      setQIndex(qIndex + 1);
+      setAnswered(false);
+    } else {
+      setPhase('outro');
+      setExpression(quiz.outroExpr);
+      setInterrogated(prev => new Set([...prev, activeChar]));
+    }
+  }, [qIndex, quiz, activeChar]);
 
   const backHome = useCallback(() => {
     setPhase(allDone ? 'verdict' : 'home');
@@ -146,12 +146,12 @@ export default function MoodReader() {
               expression={expression}
               canvasSize={charData.canvasSize}
               width={380}
-              maxShift={25}
+              maxShift={15}
             />
           )}
         </div>
-        {reactionText && <div className="mr__bubble" key={reactionText}>{reactionText}</div>}
       </div>
+      {reactionText && <div className="mr__bubble" key={reactionText}>{reactionText}</div>}
 
       {phase === 'home' && (
         <>
@@ -189,7 +189,7 @@ export default function MoodReader() {
       )}
 
       {phase === 'quiz' && currentQ && (
-        <div className="mr__quiz" key={qIndex}>
+        <div className="mr__quiz" key={`${qIndex}-${answered}`}>
           <div className="mr__quiz-progress">
             <span>{qIndex + 1} / {quiz.questions.length}</span>
             <div className="mr__quiz-bar">
@@ -197,12 +197,19 @@ export default function MoodReader() {
             </div>
           </div>
           <p className="mr__quiz-q">{L(currentQ.text)}</p>
-          <div className="mr__quiz-options">
-            {currentQ.options.map((opt, i) => (
-              <button key={i} className={`mr__quiz-opt ${answered ? 'mr__quiz-opt--disabled' : ''}`}
-                onPointerDown={() => answer(i)}>{L(opt.text)}</button>
-            ))}
-          </div>
+          {!answered ? (
+            <div className="mr__quiz-options">
+              {currentQ.options.map((opt, i) => (
+                <button key={i} className="mr__quiz-opt" onPointerDown={() => answer(i)}>{L(opt.text)}</button>
+              ))}
+            </div>
+          ) : (
+            <button className="mr__continue-btn" onPointerDown={nextQuestion}>
+              {qIndex < quiz.questions.length - 1
+                ? (locale === 'zh' ? '继续' : 'Continue')
+                : (locale === 'zh' ? '结束问话' : 'End Interview')}
+            </button>
+          )}
         </div>
       )}
 
