@@ -5,9 +5,7 @@ import './LayeredCharacter.less';
 interface Props {
   charName: string;
   bgSrc: string;
-  /** All expression layer sets */
   expressions: Record<ExpressionName, LayerDef[]>;
-  /** Current expression to display */
   expression?: ExpressionName;
   canvasSize: number;
   width?: number;
@@ -32,7 +30,6 @@ function getDepthMult(cls: string, id: string): number {
   return 0.4;
 }
 
-/** Slow organic auto-sway for parallax */
 function useAutoSway() {
   const [sway, setSway] = useState({ x: 0, y: 0 });
   const rafRef = useRef<number>();
@@ -54,6 +51,8 @@ function useAutoSway() {
   return sway;
 }
 
+const EXPR_KEYS: ExpressionName[] = ['neutral', 'happy', 'sad', 'surprised', 'angry'];
+
 export default function LayeredCharacter({
   charName,
   bgSrc,
@@ -67,32 +66,31 @@ export default function LayeredCharacter({
   const sway = useAutoSway();
   const blinkTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
-  const currentLayers = expressions[expression] ?? expressions.neutral;
-
-  // Blink (only for neutral/happy)
   const shouldBlink = expression === 'neutral' || expression === 'happy';
 
   const blink = useCallback(() => {
     if (!shouldBlink) return;
     const container = document.querySelector(`.mr-char-${charName}`);
     if (!container) return;
+    const activeLayer = container.querySelector(`.mr-expr-active`);
+    if (!activeLayer) return;
 
-    // Close eyelashes
-    container.querySelectorAll<HTMLElement>('.mr-expr-current .mr-eyelash-layer').forEach(el => {
+    activeLayer.querySelectorAll<HTMLElement>('.mr-eyelash-layer').forEach(el => {
       el.style.transition = 'transform 70ms ease-in';
       el.style.transform = 'scaleY(0.05)';
     });
-    container.querySelectorAll<HTMLElement>('.mr-expr-current .mr-eye-layer').forEach(el => {
+    activeLayer.querySelectorAll<HTMLElement>('.mr-eye-layer').forEach(el => {
       el.style.transition = 'opacity 50ms';
       el.style.opacity = '0';
     });
 
     blinkTimerRef.current = setTimeout(() => {
-      container.querySelectorAll<HTMLElement>('.mr-expr-current .mr-eyelash-layer').forEach(el => {
+      if (!activeLayer) return;
+      activeLayer.querySelectorAll<HTMLElement>('.mr-eyelash-layer').forEach(el => {
         el.style.transition = 'transform 120ms ease-out';
         el.style.transform = '';
       });
-      container.querySelectorAll<HTMLElement>('.mr-expr-current .mr-eye-layer').forEach(el => {
+      activeLayer.querySelectorAll<HTMLElement>('.mr-eye-layer').forEach(el => {
         el.style.transition = 'opacity 80ms 30ms';
         el.style.opacity = '';
       });
@@ -104,33 +102,6 @@ export default function LayeredCharacter({
     if (shouldBlink) blinkTimerRef.current = setTimeout(blink, 1500);
     return () => { if (blinkTimerRef.current) clearTimeout(blinkTimerRef.current); };
   }, [blink, shouldBlink]);
-
-  // Render a layer set
-  const renderLayers = (layers: LayerDef[]) => (
-    layers.map(([src, left, top, w, h, cls, id], i) => {
-      const mult = getDepthMult(cls, id);
-      const ox = sway.x * maxShift * mult;
-      const oy = sway.y * maxShift * mult * 0.6;
-      const isEyelash = id.startsWith('eyelash');
-      const isEye = id.startsWith('eyewhite') || id.startsWith('irides');
-
-      return (
-        <img
-          key={`${id || cls || i}-${i}`}
-          src={src}
-          className={`mr-layer ${cls} ${isEyelash ? 'mr-eyelash-layer' : ''} ${isEye ? 'mr-eye-layer' : ''}`}
-          draggable={false}
-          style={{
-            left: left + ox,
-            top: top + oy,
-            width: w,
-            height: h,
-            pointerEvents: 'none',
-          }}
-        />
-      );
-    })
-  );
 
   return (
     <div
@@ -151,17 +122,53 @@ export default function LayeredCharacter({
           src={bgSrc}
           className="mr-layer mr-bg"
           draggable={false}
-          style={{
-            left: sway.x * maxShift * 0.0,
-            top: sway.y * maxShift * 0.0,
-            width: canvasSize,
-            height: canvasSize,
-            pointerEvents: 'none',
-          }}
+          style={{ left: 0, top: 0, width: canvasSize, height: canvasSize, pointerEvents: 'none' }}
         />
 
-        {/* Character layers — images preloaded, switch is instant */}
-        {renderLayers(currentLayers)}
+        {/* All expression sets rendered simultaneously, only active one visible */}
+        {EXPR_KEYS.map(exprKey => {
+          const layers = expressions[exprKey];
+          if (!layers) return null;
+          const isActive = exprKey === expression;
+
+          return (
+            <div
+              key={exprKey}
+              className={`mr-expr-set ${isActive ? 'mr-expr-active' : ''}`}
+              style={{
+                position: 'absolute',
+                top: 0, left: 0,
+                width: '100%', height: '100%',
+                opacity: isActive ? 1 : 0,
+                pointerEvents: isActive ? 'auto' : 'none',
+              }}
+            >
+              {layers.map(([src, left, top, w, h, cls, id], i) => {
+                const mult = getDepthMult(cls, id);
+                const ox = sway.x * maxShift * mult;
+                const oy = sway.y * maxShift * mult * 0.6;
+                const isEyelash = id.startsWith('eyelash');
+                const isEye = id.startsWith('eyewhite') || id.startsWith('irides');
+
+                return (
+                  <img
+                    key={`${exprKey}-${id || cls || i}-${i}`}
+                    src={src}
+                    className={`mr-layer ${cls} ${isEyelash ? 'mr-eyelash-layer' : ''} ${isEye ? 'mr-eye-layer' : ''}`}
+                    draggable={false}
+                    style={{
+                      left: left + ox,
+                      top: top + oy,
+                      width: w,
+                      height: h,
+                      pointerEvents: 'none',
+                    }}
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
