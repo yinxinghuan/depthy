@@ -1,6 +1,7 @@
 import type { CharacterData } from '../types';
 
 // ── Isaya ──
+import isaya_bg from '../img/isaya/bg.png';
 import isaya_00_back_hair from '../img/isaya/00_back_hair.png';
 import isaya_03_topwear from '../img/isaya/03_topwear.png';
 import isaya_01_neck from '../img/isaya/01_neck.png';
@@ -21,6 +22,7 @@ import isaya_17_front_hair from '../img/isaya/17_front_hair.png';
 import isaya_02_headwear from '../img/isaya/02_headwear.png';
 
 const ISAYA_LAYERS: CharacterData['layers'] = [
+  [isaya_bg, 0, 0, 1280, 1280, 'mr-bg', ''],
   [isaya_00_back_hair, 0, 0, 1280, 1280, 'mr-back-hair', ''],
   [isaya_03_topwear, 0, 0, 1280, 1280, '', ''],
   [isaya_01_neck, 0, 0, 1280, 1280, '', ''],
@@ -42,6 +44,7 @@ const ISAYA_LAYERS: CharacterData['layers'] = [
 ];
 
 // ── Jenny ──
+import jenny_bg from '../img/jenny/bg.png';
 import jenny_00_back_hair from '../img/jenny/00_back_hair.png';
 import jenny_01_topwear from '../img/jenny/01_topwear.png';
 import jenny_02_neck from '../img/jenny/02_neck.png';
@@ -62,6 +65,7 @@ import jenny_16_front_hair from '../img/jenny/16_front_hair.png';
 import jenny_17_eyewear from '../img/jenny/17_eyewear.png';
 
 const JENNY_LAYERS: CharacterData['layers'] = [
+  [jenny_bg, 0, 0, 1280, 1280, 'mr-bg', ''],
   [jenny_00_back_hair, 0, 0, 1280, 1280, 'mr-back-hair', ''],
   [jenny_01_topwear, 0, 0, 1280, 1280, '', ''],
   [jenny_02_neck, 0, 0, 1280, 1280, '', ''],
@@ -83,6 +87,7 @@ const JENNY_LAYERS: CharacterData['layers'] = [
 ];
 
 // ── Algram ──
+import algram_bg from '../img/algram/bg.png';
 import algram_00_topwear from '../img/algram/00_topwear.png';
 import algram_01_neck from '../img/algram/01_neck.png';
 import algram_04_face from '../img/algram/04_face.png';
@@ -101,6 +106,7 @@ import algram_05_mouth from '../img/algram/05_mouth.png';
 import algram_15_front_hair from '../img/algram/15_front_hair.png';
 
 const ALGRAM_LAYERS: CharacterData['layers'] = [
+  [algram_bg, 0, 0, 1280, 1280, 'mr-bg', ''],
   [algram_00_topwear, 0, 0, 1280, 1280, '', ''],
   [algram_01_neck, 0, 0, 1280, 1280, '', ''],
   [algram_04_face, 0, 0, 1280, 1280, '', ''],
@@ -120,6 +126,7 @@ const ALGRAM_LAYERS: CharacterData['layers'] = [
 ];
 
 // ── Isabel ──
+import isabel_bg from '../img/isabel/bg.png';
 import isabel_00_back_hair from '../img/isabel/00_back_hair.png';
 import isabel_01_topwear from '../img/isabel/01_topwear.png';
 import isabel_02_neck from '../img/isabel/02_neck.png';
@@ -140,6 +147,7 @@ import isabel_07_mouth from '../img/isabel/07_mouth.png';
 import isabel_17_front_hair from '../img/isabel/17_front_hair.png';
 
 const ISABEL_LAYERS: CharacterData['layers'] = [
+  [isabel_bg, 0, 0, 1280, 1280, 'mr-bg', ''],
   [isabel_00_back_hair, 0, 0, 1280, 1280, 'mr-back-hair', ''],
   [isabel_01_topwear, 0, 0, 1280, 1280, '', ''],
   [isabel_02_neck, 0, 0, 1280, 1280, '', ''],

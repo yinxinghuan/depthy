@@ -18,12 +18,13 @@ interface Props {
  * Higher mult = moves more = feels closer to camera.
  */
 const DEPTH_MAP: Record<string, number> = {
-  'mr-back-hair': 0.15,
-  'mr-headwear': 0.35,
-  'mr-handwear': 0.3,
-  'mr-front-hair': 0.85,
-  'mr-eyewear': 0.6,
-  // default body/face layers → 0.4 (mid depth)
+  'mr-bg': 0.0,           // background: stays nearly still
+  'mr-back-hair': 0.2,
+  'mr-headwear': 0.4,
+  'mr-handwear': 0.35,
+  'mr-front-hair': 0.9,
+  'mr-eyewear': 0.65,
+  // default body/face layers → 0.45 (mid depth)
 };
 
 function getDepthMult(cls: string, id: string): number {
@@ -38,7 +39,7 @@ function getDepthMult(cls: string, id: string): number {
   // Nose/mouth → fairly front
   if (id === 'nose' || id === 'mouth') return 0.7;
   // Default body
-  return 0.4;
+  return 0.45;
 }
 
 export default function LayeredCharacter({
@@ -114,7 +115,7 @@ export default function LayeredCharacter({
   return (
     <div
       className="mr-character"
-      style={{ width, height: width, overflow: 'hidden' }}
+      style={{ width, height: Math.round(width * 1.15), overflow: 'hidden', borderRadius: 28 }}
     >
       <div
         className="mr-character__canvas"
