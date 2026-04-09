@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import LayeredCharacter from './components/LayeredCharacter';
+import Typewriter from './components/Typewriter';
 import SplashScreen from './components/SplashScreen';
 import { CHARACTERS, loadCharacter } from './data/characters';
 import { CHARACTER_QUIZZES, STORY_INTRO } from './data/quiz';
@@ -8,7 +9,7 @@ import type { ExpressionName, CharacterData } from './types';
 import { t, L, locale } from './i18n';
 import './MoodReader.less';
 
-type Phase = 'splash' | 'home' | 'intro' | 'quiz' | 'outro' | 'verdict' | 'ending';
+type Phase = 'splash' | 'story' | 'home' | 'intro' | 'quiz' | 'outro' | 'verdict' | 'ending';
 
 function preloadImages(char: CharacterData): Promise<void> {
   const allSrcs = new Set<string>();
@@ -43,9 +44,11 @@ export default function MoodReader() {
   const [interrogated, setInterrogated] = useState<Set<string>>(new Set());
   const [endingIndex, setEndingIndex] = useState(-1);
 
+  const needsChar = phase === 'home' || phase === 'intro' || phase === 'quiz' || phase === 'outro' || phase === 'ending';
+
   const charData = (phase === 'ending' && endingIndex >= 0)
     ? loadCharacter(ENDINGS[endingIndex].reactor)
-    : phase === 'home' || phase === 'verdict'
+    : phase === 'home'
       ? CHARACTERS[homeIndex]
       : loadCharacter(activeChar);
 
@@ -54,35 +57,29 @@ export default function MoodReader() {
   const allDone = interrogated.size >= 4;
 
   useEffect(() => {
-    if (phase === 'splash') return;
+    if (!needsChar) return;
     let cancelled = false;
-    setVisible(false);
-    setReady(false);
+    setVisible(false); setReady(false);
     preloadImages(charData).then(() => {
       if (cancelled) return;
       setReady(true);
       requestAnimationFrame(() => { if (!cancelled) setVisible(true); });
     });
     return () => { cancelled = true; };
-  }, [charData, phase]);
+  }, [charData, needsChar]);
 
   const switchHome = useCallback((i: number) => {
-    setReady(false); setVisible(false); setHomeIndex(i);
-    setExpression('neutral');
+    setReady(false); setVisible(false); setHomeIndex(i); setExpression('neutral');
   }, []);
 
   const enterCharacter = useCallback(() => {
     setActiveChar(CHARACTERS[homeIndex].name);
-    setPhase('intro');
-    setExpression('neutral');
-    setQIndex(0);
-    setReactionText(''); setAnswered(false);
+    setPhase('intro'); setExpression('neutral');
+    setQIndex(0); setReactionText(''); setAnswered(false);
   }, [homeIndex]);
 
   const startQuiz = useCallback(() => {
-    setPhase('quiz');
-    setExpression('neutral');
-    setReactionText(''); setAnswered(false);
+    setPhase('quiz'); setExpression('neutral'); setReactionText(''); setAnswered(false);
   }, []);
 
   const answer = useCallback((optIdx: number) => {
@@ -96,8 +93,7 @@ export default function MoodReader() {
   const nextQuestion = useCallback(() => {
     setReactionText('');
     if (qIndex < quiz.questions.length - 1) {
-      setQIndex(qIndex + 1);
-      setAnswered(false);
+      setQIndex(qIndex + 1); setAnswered(false);
     } else {
       setPhase('outro');
       setExpression(quiz.outroExpr);
@@ -107,51 +103,96 @@ export default function MoodReader() {
 
   const backHome = useCallback(() => {
     setPhase(allDone ? 'verdict' : 'home');
-    setExpression('neutral');
-    setReactionText('');
+    setExpression('neutral'); setReactionText('');
   }, [allDone]);
 
   const chooseEnding = useCallback((idx: number) => {
-    setEndingIndex(idx);
-    setExpression(ENDINGS[idx].reactExpr);
-    setPhase('ending');
+    setEndingIndex(idx); setExpression(ENDINGS[idx].reactExpr); setPhase('ending');
   }, []);
 
   const restart = useCallback(() => {
-    setPhase('home'); setHomeIndex(0);
+    setPhase('story'); setHomeIndex(0);
     setInterrogated(new Set()); setEndingIndex(-1);
     setExpression('neutral'); setReactionText('');
   }, []);
 
   // ── Splash ──
   if (phase === 'splash') {
+    return <div className="mr"><SplashScreen onDone={() => setPhase('story')} /></div>;
+  }
+
+  // ── Story intro (standalone page, typewriter) ──
+  if (phase === 'story') {
     return (
-      <div className="mr">
-        <SplashScreen onDone={() => setPhase('home')} />
+      <div className="mr mr--story">
+        <div className="mr__story-page">
+          <h1 className="mr__story-title">{t('story_title')}</h1>
+          <Typewriter text={L(STORY_INTRO)} speed={40} />
+          <button className="mr__start-btn" onPointerDown={() => setPhase('home')}>
+            {locale === 'zh' ? '开始调查' : 'Begin Investigation'}
+          </button>
+        </div>
       </div>
     );
   }
 
+  // ── Verdict (standalone page, simple avatars) ──
+  if (phase === 'verdict') {
+    return (
+      <div className="mr mr--verdict">
+        <h2 className="mr__verdict-title">{t('verdict_title')}</h2>
+        <div className="mr__suspect-grid">
+          {CHARACTERS.map(c => {
+            // Find the ending for this character
+            const endIdx = ENDINGS.findIndex(e => e.suspect === c.name);
+            return (
+              <button
+                key={c.name}
+                className="mr__suspect-card"
+                onPointerDown={() => endIdx >= 0 && chooseEnding(endIdx)}
+              >
+                <div className="mr__suspect-avatar">{c.displayName[0]}</div>
+                <span className="mr__suspect-name">{c.displayName}</span>
+                <span className="mr__suspect-role">{L(CHARACTER_QUIZZES[c.name].role)}</span>
+              </button>
+            );
+          })}
+        </div>
+        {/* Extra options */}
+        {ENDINGS.filter(e => !CHARACTERS.find(c => c.name === e.suspect)).map((e, i) => (
+          <button key={i} className="mr__verdict-extra" onPointerDown={() => chooseEnding(ENDINGS.indexOf(e))}>
+            {L(e.label)}
+          </button>
+        ))}
+      </div>
+    );
+  }
+
+  // ── Character phases (intro/quiz/outro/ending) ──
   return (
     <div className="mr">
-      <div className="mr__stage">
-        {!ready && <div className="mr__shimmer" style={{ width: 380, height: 380, borderRadius: 28 }} />}
-        <div className={`mr__portrait ${visible ? 'mr__portrait--visible' : ''}`}>
-          {ready && (
-            <LayeredCharacter
-              key={charData.name}
-              charName={charData.name}
-              bgSrc={charData.bgSrc}
-              expressions={charData.expressions}
-              expression={expression}
-              canvasSize={charData.canvasSize}
-              width={380}
-              maxShift={15}
-            />
-          )}
+      {needsChar && (
+        <div className="mr__stage">
+          {!ready && <div className="mr__shimmer" style={{ width: 380, height: 380, borderRadius: 28 }} />}
+          <div className={`mr__portrait ${visible ? 'mr__portrait--visible' : ''}`}>
+            {ready && (
+              <LayeredCharacter
+                key={charData.name}
+                charName={charData.name}
+                bgSrc={charData.bgSrc}
+                expressions={charData.expressions}
+                expression={expression}
+                canvasSize={charData.canvasSize}
+                width={380}
+                maxShift={15}
+              />
+            )}
+          </div>
         </div>
-      </div>
-      {reactionText && <div className="mr__bubble" key={reactionText}>{reactionText}</div>}
+      )}
+
+      {/* Reaction — simple italic text below portrait */}
+      {reactionText && <p className="mr__reaction" key={reactionText}>"{reactionText}"</p>}
 
       {phase === 'home' && (
         <>
@@ -173,7 +214,6 @@ export default function MoodReader() {
               <span key={c.name} className={`mr__dot ${i === homeIndex ? 'mr__dot--active' : ''} ${interrogated.has(c.name) ? 'mr__dot--done' : ''}`} onPointerDown={() => switchHome(i)} />
             ))}
           </div>
-          {!allDone && <p className="mr__story-intro">{L(STORY_INTRO)}</p>}
           {allDone
             ? <button className="mr__start-btn mr__start-btn--verdict" onPointerDown={() => setPhase('verdict')}>{t('make_verdict')}</button>
             : <button className="mr__start-btn" onPointerDown={enterCharacter}>{t('interrogate')} {charData.displayName}</button>
@@ -183,7 +223,7 @@ export default function MoodReader() {
 
       {phase === 'intro' && quiz && (
         <div className="mr__dialog">
-          <p className="mr__dialog-text">{L(quiz.intro)}</p>
+          <p className="mr__dialog-text">"{L(quiz.intro)}"</p>
           <button className="mr__start-btn" onPointerDown={startQuiz}>{t('start')}</button>
         </div>
       )}
@@ -196,17 +236,19 @@ export default function MoodReader() {
               <div className="mr__quiz-fill" style={{ width: `${((qIndex + 1) / quiz.questions.length) * 100}%` }} />
             </div>
           </div>
-          <p className="mr__quiz-q">{L(currentQ.text)}</p>
           {!answered ? (
-            <div className="mr__quiz-options">
-              {currentQ.options.map((opt, i) => (
-                <button key={i} className="mr__quiz-opt" onPointerDown={() => answer(i)}>{L(opt.text)}</button>
-              ))}
-            </div>
+            <>
+              <p className="mr__quiz-q">{L(currentQ.text)}</p>
+              <div className="mr__quiz-options">
+                {currentQ.options.map((opt, i) => (
+                  <button key={i} className="mr__quiz-opt" onPointerDown={() => answer(i)}>{L(opt.text)}</button>
+                ))}
+              </div>
+            </>
           ) : (
             <button className="mr__continue-btn" onPointerDown={nextQuestion}>
               {qIndex < quiz.questions.length - 1
-                ? (locale === 'zh' ? '继续' : 'Continue')
+                ? (locale === 'zh' ? '继续 →' : 'Continue →')
                 : (locale === 'zh' ? '结束问话' : 'End Interview')}
             </button>
           )}
@@ -215,19 +257,8 @@ export default function MoodReader() {
 
       {phase === 'outro' && quiz && (
         <div className="mr__dialog">
-          <p className="mr__dialog-text">{L(quiz.outro)}</p>
+          <p className="mr__dialog-text">"{L(quiz.outro)}"</p>
           <button className="mr__start-btn" onPointerDown={backHome}>{t('back_home')}</button>
-        </div>
-      )}
-
-      {phase === 'verdict' && (
-        <div className="mr__verdict">
-          <h2 className="mr__verdict-title">{t('verdict_title')}</h2>
-          <div className="mr__verdict-options">
-            {ENDINGS.map((e, i) => (
-              <button key={i} className="mr__verdict-btn" onPointerDown={() => chooseEnding(i)}>{L(e.label)}</button>
-            ))}
-          </div>
         </div>
       )}
 
