@@ -236,15 +236,13 @@ export default function MoodReader() {
               <div className="mr__quiz-fill" style={{ width: `${((qIndex + 1) / quiz.questions.length) * 100}%` }} />
             </div>
           </div>
+          <p className="mr__quiz-q">{L(currentQ.text)}</p>
           {!answered ? (
-            <>
-              <p className="mr__quiz-q">{L(currentQ.text)}</p>
-              <div className="mr__quiz-options">
-                {currentQ.options.map((opt, i) => (
-                  <button key={i} className="mr__quiz-opt" onPointerDown={() => answer(i)}>{L(opt.text)}</button>
-                ))}
-              </div>
-            </>
+            <div className="mr__quiz-options">
+              {currentQ.options.map((opt, i) => (
+                <button key={i} className="mr__quiz-opt" onPointerDown={() => answer(i)}>{L(opt.text)}</button>
+              ))}
+            </div>
           ) : (
             <button className="mr__continue-btn" onPointerDown={nextQuestion}>
               {qIndex < quiz.questions.length - 1
