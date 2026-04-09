@@ -68,22 +68,6 @@ export default function LayeredCharacter({
   const blinkTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
   const currentLayers = expressions[expression] ?? expressions.neutral;
-  const [prevExpr, setPrevExpr] = useState(expression);
-  const [transitioning, setTransitioning] = useState(false);
-
-  // Crossfade on expression change
-  useEffect(() => {
-    if (expression !== prevExpr) {
-      setTransitioning(true);
-      const timer = setTimeout(() => {
-        setPrevExpr(expression);
-        setTransitioning(false);
-      }, 400); // match CSS transition duration
-      return () => clearTimeout(timer);
-    }
-  }, [expression, prevExpr]);
-
-  const prevLayers = expressions[prevExpr] ?? expressions.neutral;
 
   // Blink (only for neutral/happy)
   const shouldBlink = expression === 'neutral' || expression === 'happy';
@@ -176,17 +160,8 @@ export default function LayeredCharacter({
           }}
         />
 
-        {/* Previous expression (fading out) */}
-        {transitioning && prevExpr !== expression && (
-          <div className="mr-expr-layer mr-expr-prev">
-            {renderLayers(prevLayers)}
-          </div>
-        )}
-
-        {/* Current expression (always visible, fading in over prev) */}
-        <div className="mr-expr-layer mr-expr-current">
-          {renderLayers(currentLayers)}
-        </div>
+        {/* Character layers — images preloaded, switch is instant */}
+        {renderLayers(currentLayers)}
       </div>
     </div>
   );
