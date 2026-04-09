@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import LayeredCharacter from './components/LayeredCharacter';
 import { CHARACTERS, loadCharacter } from './data/characters';
-import { CHARACTER_QUIZZES } from './data/quiz';
+import { CHARACTER_QUIZZES, STORY_INTRO } from './data/quiz';
 import type { ExpressionName, CharacterData } from './types';
 import { t } from './i18n';
 import './MoodReader.less';
@@ -135,6 +135,7 @@ export default function MoodReader() {
             </button>
             <div className="mr__info">
               <span className="mr__name">{charData.displayName}</span>
+              {quiz && <span className="mr__role">{quiz.role[locale]}</span>}
             </div>
             <button className="mr__nav" onPointerDown={() => switchHome((homeIndex + 1) % CHARACTERS.length)}>
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="9 6 15 12 9 18" /></svg>
@@ -145,7 +146,8 @@ export default function MoodReader() {
               <span key={c.name} className={`mr__dot ${i === homeIndex ? 'mr__dot--active' : ''}`} onPointerDown={() => switchHome(i)} />
             ))}
           </div>
-          <button className="mr__start-btn" onPointerDown={enterCharacter}>{t('chat_with')} {charData.displayName}</button>
+          <p className="mr__story-intro">{STORY_INTRO[locale]}</p>
+          <button className="mr__start-btn" onPointerDown={enterCharacter}>{t('interrogate')} {charData.displayName}</button>
         </>
       )}
 
