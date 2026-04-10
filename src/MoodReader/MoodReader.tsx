@@ -52,7 +52,8 @@ export default function MoodReader() {
       ? CHARACTERS[homeIndex]
       : loadCharacter(activeChar);
 
-  const quiz = CHARACTER_QUIZZES[activeChar];
+  const quizChar = phase === 'home' ? CHARACTERS[homeIndex].name : activeChar;
+  const quiz = CHARACTER_QUIZZES[quizChar];
   const currentQ = quiz?.questions[qIndex];
   const allDone = interrogated.size >= 4;
 
